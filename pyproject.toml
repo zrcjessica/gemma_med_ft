@@ -27,11 +27,9 @@ dependencies = [
     "rich>=13.0",
 ]
 
-[project.optional-dependencies]
-eval = [
-    "vllm==0.9.1",
-    "lm-eval==0.4.9",
-]
+# NOTE: vLLM is deliberately NOT an extra here. It hard-pins torch (0.9.1 wants
+# torch==2.7.0) and conflicts with the training stack's torch==2.6.0. Eval runs
+# in its own venv, built by scripts/build_eval_env.sh.
 
 [tool.setuptools.packages.find]
 where = ["."]
