@@ -103,7 +103,29 @@ export ACCELERATE_LOG_LEVEL=info
 
 NUM_GPUS=$(python -c "import torch; print(torch.cuda.device_count())")
 echo "Visible GPUs: ${NUM_GPUS}"
-nvidia-smi --query-gpu=index,name,memory.total --format=csv,noheader
+nvidia-smi --query-gpu=index,name,compute_mode,memory.used --format=csv,noheader
+
+# Preflight: actually allocate on every visible GPU. Some shared nodes hand out
+# a GPU that another process already holds exclusively, and without this the job
+# loads the model for minutes before dying on an opaque
+# "CUDA-capable device(s) is/are busy or unavailable". Fail in seconds instead,
+# and print who's holding the device.
+if ! python - <<'PY'
+import sys, torch
+for i in range(torch.cuda.device_count()):
+    try:
+        torch.zeros(8, device=f"cuda:{i}").sum().item()
+        print(f"preflight: cuda:{i} OK")
+    except Exception as e:
+        print(f"preflight: cuda:{i} UNUSABLE -- {e}", file=sys.stderr)
+        sys.exit(1)
+PY
+then
+    echo "ERROR: GPU preflight failed on $(hostname). Processes holding the device:" >&2
+    nvidia-smi --query-compute-apps=pid,process_name,used_memory --format=csv >&2
+    echo "Resubmit; if it recurs on many nodes, escalate to the BigPurple admins." >&2
+    exit 1
+fi
 
 EXTRA=()
 [[ "${LORA}" == "1" ]] && EXTRA+=(--lora)
