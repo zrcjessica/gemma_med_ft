@@ -1,0 +1,52 @@
+[build-system]
+requires = ["setuptools>=64", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "gemma-med-ft"
+version = "0.1.0"
+description = "Open reproduction of MedGemma-style medical fine-tuning of Gemma 3 (1b/4b/12b/27b)"
+requires-python = ">=3.11"
+dependencies = [
+    "torch==2.6.0",
+    "transformers==4.53.2",
+    "trl==0.19.1",
+    "peft==0.16.0",
+    "accelerate==1.8.1",
+    "datasets==3.6.0",
+    "deepspeed==0.16.5",
+    "safetensors>=0.5.3",
+    "sentencepiece>=0.2.0",
+    "protobuf>=4.25",
+    "bitsandbytes>=0.45.0",
+    "flash-attn==2.7.4.post1",
+    "wandb>=0.18.0",
+    "numpy>=1.26",
+    "pandas>=2.1",
+    "scikit-learn>=1.3",
+    "pyyaml>=6.0",
+    "rich>=13.0",
+]
+
+[project.optional-dependencies]
+eval = [
+    "vllm==0.9.1",
+    "lm-eval==0.4.9",
+]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["gemma_med*"]
+
+# A100 (sm_80) on BigPurple and RTX 3090 (sm_86) on olab1 are both covered by cu124.
+[[tool.uv.index]]
+name = "pytorch-cu124"
+url = "https://download.pytorch.org/whl/cu124"
+explicit = true
+
+[tool.uv.sources]
+torch = { index = "pytorch-cu124" }
+
+# flash-attn needs torch present at build time; don't isolate its build env.
+[tool.uv]
+no-build-isolation-package = ["flash-attn"]
