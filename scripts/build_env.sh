@@ -10,7 +10,7 @@ export UV_CACHE_DIR=/gpfs/data/oermannlab/users/zhouj14/.uv_cache
 
 cd "${REPO_ROOT}"
 
-uv venv --python 3.11 .venv
+uv venv --clear --python 3.11 .venv
 uv sync
 source .venv/bin/activate
 
