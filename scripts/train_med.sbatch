@@ -6,6 +6,7 @@
 #SBATCH --mem=200G
 #SBATCH --output=/gpfs/data/oermannlab/users/zhouj14/gemma_med_ft/slurm/logs/%x_%j.out
 #SBATCH --error=/gpfs/data/oermannlab/users/zhouj14/gemma_med_ft/slurm/logs/%x_%j.err
+#SBATCH --requeue
 #
 # Medical SFT for one Gemma 3 size. GPU count is set at submit time, e.g.
 #   sbatch --gres=gpu:a100:2 --export=ALL,SIZE=1b,LR=1e-5 scripts/train_med.sbatch
@@ -121,9 +122,23 @@ for i in range(torch.cuda.device_count()):
         sys.exit(1)
 PY
 then
-    echo "ERROR: GPU preflight failed on $(hostname). Processes holding the device:" >&2
+    echo "ERROR: GPU preflight failed on $(hostname)." >&2
+    # Note: cgroup isolation hides other users' processes, so this often prints
+    # nothing even when another job holds the device. Absence here is not proof
+    # the GPU is free.
     nvidia-smi --query-compute-apps=pid,process_name,used_memory --format=csv >&2
-    echo "Resubmit; if it recurs on many nodes, escalate to the BigPurple admins." >&2
+
+    # Several a100_short nodes hand out a GPU that reports Default compute mode
+    # and 0 MiB used but rejects every allocation. It's node-specific and
+    # transient, so bounce the job back to the scheduler rather than burn the
+    # submission -- it usually lands somewhere healthy.
+    RESTARTS=${SLURM_RESTART_COUNT:-0}
+    if [[ "${REQUEUE_ON_GPU_FAIL:-1}" == "1" && "${RESTARTS}" -lt 3 ]]; then
+        echo "Requeueing (restart ${RESTARTS}/3) to land on a different node." >&2
+        scontrol requeue "${SLURM_JOB_ID}"
+        sleep 60   # give the scheduler time to act before the trap fires
+    fi
+    echo "Giving up after ${RESTARTS} restarts. If this recurs across many nodes, escalate to BigPurple admins." >&2
     exit 1
 fi
 
