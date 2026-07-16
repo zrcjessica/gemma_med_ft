@@ -97,6 +97,15 @@ fi
 cd "${REPO_ROOT}"
 source .venv/bin/activate
 
+# accelerate opportunistically imports DeepSpeed (even single-GPU, via
+# unwrap_model), and DeepSpeed probes CUDA_HOME at import time -- raising
+# MissingCUDAException if it can't find one. Only *some* a100 nodes have
+# /usr/local/cuda (4012 and 4033 do, 4022 doesn't), so without this a run fails
+# or survives depending purely on which node it landed on.
+module load cuda/12.6 2>/dev/null || true
+export CUDA_HOME=${CUDA_HOME:-/gpfs/share/apps/cuda/12.6}
+export PATH=${CUDA_HOME}/bin:${PATH}
+
 export HF_HOME=${HF_HOME:-/gpfs/data/oermannlab/users/zhouj14/hf}
 export HF_HUB_OFFLINE=1          # data + weights are prestaged; don't hit the hub mid-run
 export OMP_NUM_THREADS=${SLURM_CPUS_PER_TASK:-16}
