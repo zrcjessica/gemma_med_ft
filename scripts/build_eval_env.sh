@@ -12,5 +12,12 @@ uv venv --python 3.11 .venv-eval
 source .venv-eval/bin/activate
 uv pip install "vllm==0.9.1" "transformers>=4.53" "datasets>=3.6" pandas rich
 
-python -c "import vllm, torch; print('vllm', vllm.__version__, '| torch', torch.__version__)"
+# Check versions via metadata, not `import vllm`: importing it runs platform
+# detection and hard-fails on a CPU-only node, where this build usually runs.
+python - <<'PY'
+from importlib.metadata import version
+import torch
+print("vllm", version("vllm"), "| torch", torch.__version__)
+PY
+
 echo BUILD_EVAL_ENV_DONE
