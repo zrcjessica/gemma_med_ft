@@ -59,7 +59,13 @@ def parse_args():
 
     p.add_argument("--gradient-checkpointing", action="store_true", default=True)
     p.add_argument("--no-gradient-checkpointing", dest="gradient_checkpointing", action="store_false")
-    p.add_argument("--attn", default="flash_attention_2", choices=["flash_attention_2", "eager", "sdpa"])
+    # transformers emits: "It is strongly recommended to train Gemma3 models with
+    # the `eager` attention implementation instead of `flash_attention_2`."
+    # Gemma 3 mixes sliding-window and full-attention layers, and FA2 doesn't
+    # honor every mask the model builds. We default to correctness; pass
+    # --attn flash_attention_2 to trade it for speed once you've checked the
+    # loss curves agree.
+    p.add_argument("--attn", default="eager", choices=["flash_attention_2", "eager", "sdpa"])
     p.add_argument("--wandb-project", default="gemma-med-ft")
     p.add_argument("--max-train-samples", type=int, default=None, help="Smoke-test escape hatch.")
     return p.parse_args()

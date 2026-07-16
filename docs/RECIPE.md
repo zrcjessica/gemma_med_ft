@@ -98,6 +98,40 @@ for ablations only; results from it are inflated by construction.
 **medical-o1 sizing.** The `en` config is 19,704 rows, not the ~90k sometimes
 quoted (that counts en/zh/en_mix/zh_mix together).
 
+### What the `default` build actually produced (312,335 train / 3,155 val)
+
+```
+source               raw   -contam    -dupe     final     paper
+medqa             10,178         0        2    10,176      9275
+medmcqa          182,822        13   30,838   151,971    182806
+pubmedqa             500         0        0       500      1000
+medexpqa             434         0       10       424       434
+liveqa               633         0      213       420       634
+medical_o1        19,704         0       36    19,668         -
+medreason         32,682         2   20,349    12,331         -
+reasonmed      1,111,555         0  940,536    80,000         -
+aloe_general     316,741         0   46,070    40,000         -
+afrimedqa            SKIPPED (gated — no access)
+```
+
+Three things worth knowing, all measured rather than assumed:
+
+* **ReasonMed is ~85% redundant.** 940,536 of its 1,111,555 rows duplicate
+  questions already present in MedQA/MedMCQA/MedReason. Only ~171k are novel (we
+  cap at 80k). Treating its 1.1M headline size as 1.1M of *new* signal would be
+  a mistake.
+* **MedReason loses 62%** to the same effect — it is largely MedMCQA re-reasoned.
+* **MedMCQA contains ~31k internal duplicate questions** (~17% of its train
+  split). That's the dataset's own redundancy, not eval leakage.
+
+Actual eval contamination was small (13 rows in MedMCQA, 2 in MedReason) — the
+decontamination pass mostly buys us *deduplication*. But the leakage was real and
+non-zero, and you cannot know that without running the check.
+
+**LiveQA, 634 vs our 420.** LiveQA pairs multiple answers with the same question;
+the paper's 634 counts pairs, our dedup keeps one row per question. If matching
+Table 1 exactly matters more than dedup here, relax it for this source.
+
 ## Targets
 
 MedGemma vs base Gemma 3 (report, Table 4). Our runs start from `-it`, so the

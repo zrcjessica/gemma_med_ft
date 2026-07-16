@@ -150,7 +150,7 @@ then
     exit 1
 fi
 
-EXTRA=()
+EXTRA=(--attn "${ATTN:-eager}")
 [[ "${LORA}" == "1" ]] && EXTRA+=(--lora)
 [[ -n "${MAX_TRAIN_SAMPLES:-}" ]] && EXTRA+=(--max-train-samples "${MAX_TRAIN_SAMPLES}")
 
