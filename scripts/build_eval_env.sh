@@ -10,7 +10,11 @@ export UV_CACHE_DIR=/gpfs/data/oermannlab/users/zhouj14/.uv_cache
 cd "${REPO_ROOT}"
 uv venv --clear --python 3.11 .venv-eval
 source .venv-eval/bin/activate
-uv pip install "vllm==0.9.1" "transformers>=4.53" "datasets>=3.6" pandas rich
+# transformers is PINNED, not floated: vLLM 0.9.1 registers its own `aimv2`
+# config, and transformers >=4.54 defines one too, so a floating install dies
+# with "'aimv2' is already used by a Transformers config". 4.53.2 also matches
+# the training env, so a checkpoint that trains will load here.
+uv pip install "vllm==0.9.1" "transformers==4.53.2" "datasets>=3.6" pandas rich requests
 
 # Check versions via metadata, not `import vllm`: importing it runs platform
 # detection and hard-fails on a CPU-only node, where this build usually runs.
