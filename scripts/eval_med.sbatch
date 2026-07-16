@@ -18,9 +18,13 @@ set -euo pipefail
 REPO_ROOT=/gpfs/data/oermannlab/users/zhouj14/gemma_med_ft
 export HF_HOME=${HF_HOME:-/gpfs/data/oermannlab/users/zhouj14/hf}
 
+source "${REPO_ROOT}/scripts/_resolve_model.sh"
 if [[ -n "${BASELINE:-}" ]]; then
     : "${SIZE:?SIZE required when BASELINE=1}"
-    MODEL=$(ls -d ${HF_HOME}/hub/models--google--gemma-3-${SIZE}-it/snapshots/*/ | head -1)
+    MODEL=$(resolve_gemma "${SIZE}" "${KIND:-it}") || {
+        echo "ERROR: no gemma-3-${SIZE}-${KIND:-it} under: ${GEMMA_MODEL_ROOTS}" >&2
+        exit 1
+    }
     LABEL=${LABEL:-gemma-3-${SIZE}-it-baseline}
 fi
 : "${MODEL:?MODEL must be set (or BASELINE=1 with SIZE)}"

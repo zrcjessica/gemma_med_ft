@@ -46,7 +46,8 @@ case "${SIZE}" in
     *) echo "unknown SIZE ${SIZE}" >&2; exit 1 ;;
 esac
 
-MODEL_PATH=${MODEL_PATH:-$(ls -d ${HF_HOME:-/gpfs/data/oermannlab/users/zhouj14/hf}/hub/models--google--gemma-3-${SIZE}-it/snapshots/*/ 2>/dev/null | head -1)}
+source "${REPO_ROOT}/scripts/_resolve_model.sh"
+MODEL_PATH=${MODEL_PATH:-$(resolve_gemma "${SIZE}" "${KIND:-it}" || true)}
 RUN_NAME="gemma3-${SIZE}-med-${VARIANT}-lr${LR}-${SLURM_JOB_ID}"
 OUT_DIR=${REPO_ROOT}/outputs/${SIZE}/${VARIANT}_lr${LR}_${SLURM_JOB_ID}
 
@@ -83,9 +84,11 @@ echo "Out:       ${OUT_DIR}"
 echo "==========================================="
 
 if [[ -z "${MODEL_PATH}" || ! -d "${MODEL_PATH}" ]]; then
-    echo "ERROR: model snapshot not found for size ${SIZE}. Run scripts/fetch_models.sh first." >&2
+    echo "ERROR: no gemma-3-${SIZE}-${KIND:-it} snapshot under: ${GEMMA_MODEL_ROOTS}" >&2
+    echo "Set MODEL_PATH explicitly, or run scripts/fetch_models.sh to pull it." >&2
     exit 1
 fi
+echo "Model revision: $(basename "${MODEL_PATH}")"
 if [[ ! -d "${DATA_DIR}/train" ]]; then
     echo "ERROR: no mixture at ${DATA_DIR}. Run scripts/build_data.py on a login node first." >&2
     exit 1
