@@ -133,8 +133,16 @@ then
     # transient, so bounce the job back to the scheduler rather than burn the
     # submission -- it usually lands somewhere healthy.
     RESTARTS=${SLURM_RESTART_COUNT:-0}
-    if [[ "${REQUEUE_ON_GPU_FAIL:-1}" == "1" && "${RESTARTS}" -lt 3 ]]; then
-        echo "Requeueing (restart ${RESTARTS}/3) to land on a different node." >&2
+    if [[ "${REQUEUE_ON_GPU_FAIL:-1}" == "1" && "${RESTARTS}" -lt 5 ]]; then
+        # Requeueing alone isn't enough: the scheduler happily hands the job
+        # straight back to the same bad node. Accumulate an exclude list so each
+        # restart is forced somewhere new.
+        PREV_EXC=$(scontrol show job "${SLURM_JOB_ID}" 2>/dev/null \
+                   | grep -oP 'ExcNodeList=\K[^ ]+' | grep -v '^(null)$' || true)
+        NEW_EXC=$(hostname)
+        [[ -n "${PREV_EXC}" ]] && NEW_EXC="${PREV_EXC},${NEW_EXC}"
+        echo "Requeueing (restart ${RESTARTS}/5), excluding: ${NEW_EXC}" >&2
+        scontrol update jobid="${SLURM_JOB_ID}" ExcNodeList="${NEW_EXC}" || true
         scontrol requeue "${SLURM_JOB_ID}"
         sleep 60   # give the scheduler time to act before the trap fires
     fi
