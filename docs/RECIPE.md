@@ -52,6 +52,12 @@ comparison: `gemma-3-*-it` (baseline) → ours → published MedGemma.
 The `-pt` checkpoints ship **no chat template**; `gemma_med/chat.py` supplies one
 verified byte-identical to the official `gemma-3-1b-it` template (`tests/test_chat.py`).
 
+Both kinds are already cached under the lab's shared hub
+(`/gpfs/data/oermannlab/users/yeb04/hf/hub`) for every size — 270m/1b/4b/12b/27b —
+so switching arms costs nothing but `KIND=pt`. If you ever want the `-pt` +
+general-replay experiment, the data side already supports it: the `default`
+mixture carries `aloe_general` replay.
+
 ## Hyperparameters: ours, not theirs
 
 The report gives **no hyperparameters** for the main post-training run — no LR,

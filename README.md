@@ -37,8 +37,17 @@ tests/          chat-template and answer-parsing tests
 ```bash
 cd /gpfs/data/oermannlab/users/zhouj14/gemma_med_ft
 srun -p a100_dev --gres=gpu:a100:1 -c 16 --mem=96G -t 3:00:00 bash scripts/build_env.sh
-bash scripts/fetch_models.sh "1b 4b"          # login node; needs HF_TOKEN
+sbatch -p cpu_short -c 8 --mem=48G -t 4:00:00 --wrap "bash scripts/build_eval_env.sh"
 ```
+
+**No model download needed.** Every Gemma 3 size — 270m / 1b / 4b / 12b / 27b, in
+both `-pt` and `-it` — is already cached and world-readable under the lab's shared
+hub at `/gpfs/data/oermannlab/users/yeb04/hf/hub`. `scripts/_resolve_model.sh`
+finds them and logs the revision each run used. `scripts/fetch_models.sh` exists
+only for pinning your own copy.
+
+Set `KIND=pt` to train from the pretrained bases instead of `-it` (see
+RECIPE.md for why `-it` is the default).
 
 ## Build the data
 

@@ -1,5 +1,10 @@
 #!/bin/bash
-# Fetch the gemma-3-*-it checkpoints into the user's own HF cache.
+# Fetch gemma-3-*-it checkpoints into your own HF cache.
+#
+# USUALLY UNNECESSARY. The lab already has every Gemma 3 size (270m/1b/4b/12b/27b,
+# both -pt and -it) cached and world-readable under yeb04's hub, and the sbatch
+# scripts resolve from there via scripts/_resolve_model.sh. Use this only to pin
+# a revision of your own, or if that cache goes away.
 #
 # The -pt bases at .../yeb04/hf/hub/models--google--gemma-3-*pt are raw
 # pretrained checkpoints with no chat template. MedGemma starts from -pt but
