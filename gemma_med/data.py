@@ -293,7 +293,7 @@ def build_mixture(spec: MixtureSpec, decontaminate: bool = True) -> Dataset:
     blocked = eval_question_hashes() if decontaminate else set()
     log.info("decontam: %d blocked eval question hashes", len(blocked))
 
-    parts, stats = [], []
+    parts, stats, skipped = [], [], []
     seen: set[str] = set()
 
     for key in spec.sources:
@@ -301,7 +301,20 @@ def build_mixture(spec: MixtureSpec, decontaminate: bool = True) -> Dataset:
         if src.role == "eval_only":
             raise ValueError(f"{key} is eval-only (no reference answers) and cannot be trained on")
 
-        ds = LOADERS[key](src)
+        try:
+            ds = LOADERS[key](src)
+        except Exception as e:
+            if src.gated:
+                # A gated source shouldn't sink the whole build; it just changes
+                # the mix, which the summary table records as SKIPPED.
+                log.warning(
+                    "SKIPPING gated source %r (%s): %s\n  Request access at "
+                    "https://huggingface.co/datasets/%s and ensure HF_TOKEN is set.",
+                    key, src.hf_id, e, src.hf_id,
+                )
+                skipped.append(key)
+                continue
+            raise
         n0 = len(ds)
 
         if decontaminate:
@@ -331,8 +344,14 @@ def build_mixture(spec: MixtureSpec, decontaminate: bool = True) -> Dataset:
     print("-" * 64)
     for key, n0, ncon, ndup, nf, pn in stats:
         print(f"{key:<14} {n0:>9,} {ncon:>9,} {ndup:>8,} {nf:>9,} {str(pn or '-'):>9}")
+    for key in skipped:
+        print(f"{key:<14} {'SKIPPED (gated — no access)':>47}")
     total = sum(s[4] for s in stats)
     print("-" * 64)
     print(f"{'TOTAL':<14} {'':>9} {'':>9} {'':>8} {total:>9,}")
+    if skipped:
+        print(f"\nWARNING: {len(skipped)} source(s) skipped for lack of Hub access: {', '.join(skipped)}")
 
+    if not parts:
+        raise RuntimeError("every source was skipped -- nothing to train on")
     return concatenate_datasets(parts).shuffle(seed=spec.seed)

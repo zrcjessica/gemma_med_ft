@@ -47,6 +47,9 @@ def main():
         "counts_by_source": {
             s: sum(1 for x in split["train"]["source"] if x == s) for s in set(split["train"]["source"])
         },
+        # Requested but absent (e.g. gated) -- the record of what this mixture
+        # actually is, not what it was meant to be.
+        "sources_missing": sorted(set(spec.sources) - set(split["train"]["source"])),
     }
     (out / "mixture_meta.json").write_text(json.dumps(meta, indent=2))
     print(f"\nwrote {len(split['train']):,} train / {len(split['test']):,} val -> {out}")

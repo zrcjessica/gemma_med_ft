@@ -33,6 +33,9 @@ class Source:
     # "tier1" = named in Table 1; "synthetic_proxy" = stands in for the 200k
     # synthetic set; "replay" = general-instruction anti-forgetting data.
     role: str = "tier1"
+    # Requires an approved access request on the Hub. build_mixture() warns and
+    # skips these rather than failing the whole build.
+    gated: bool = False
     notes: str = ""
 
 
@@ -45,7 +48,10 @@ TIER1: list[Source] = [
     Source("medmcqa", "openlifescienceai/medmcqa", paper_n=182806, license="Apache-2.0"),
     Source("pubmedqa", "qiaojin/PubMedQA", config="pqa_labeled", paper_n=1000, license="MIT"),
     Source("medexpqa", "HiTZ/MedExpQA", config="en", paper_n=434, license="CC-BY-4.0"),
-    Source("afrimedqa", "intronhealth/afrimedqa_v2", paper_n=1003, license="CC-BY-SA-4.0"),
+    Source("afrimedqa", "intronhealth/afrimedqa_v2", paper_n=1003, license="CC-BY-SA-4.0", gated=True,
+           notes="Gated despite the CC-BY-SA license: request access at "
+                 "huggingface.co/datasets/intronhealth/afrimedqa_v2. Only ~1k of ~195k rows, "
+                 "so the build warns and continues without it."),
     Source("liveqa", "truehealth/liveqa", paper_n=634, license="unstated"),
 ]
 
