@@ -19,7 +19,6 @@ dependencies = [
     "sentencepiece>=0.2.0",
     "protobuf>=4.25",
     "bitsandbytes>=0.45.0",
-    "flash-attn==2.7.4.post1",
     "wandb>=0.18.0",
     "numpy>=1.26",
     "pandas>=2.1",
@@ -47,6 +46,5 @@ explicit = true
 [tool.uv.sources]
 torch = { index = "pytorch-cu124" }
 
-# flash-attn needs torch present at build time; don't isolate its build env.
-[tool.uv]
-no-build-isolation-package = ["flash-attn"]
+# flash-attn is installed separately by scripts/build_env.sh: its build needs
+# torch already importable, which uv sync can't guarantee in one pass.
