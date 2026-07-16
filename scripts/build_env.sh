@@ -8,6 +8,25 @@ REPO_ROOT=/gpfs/data/oermannlab/users/zhouj14/gemma_med_ft
 export HF_HOME=/gpfs/data/oermannlab/users/zhouj14/hf
 export UV_CACHE_DIR=/gpfs/data/oermannlab/users/zhouj14/.uv_cache
 
+# flash-attn compiles CUDA kernels and needs nvcc + CUDA_HOME. BigPurple's
+# newest CUDA modules are 12.6/12.9/13.0; 12.6 is the closest match to our
+# cu124 torch (minor-version compatible).
+module load cuda/12.6 || echo "WARN: module load cuda/12.6 failed; falling back to a fixed path"
+export CUDA_HOME=${CUDA_HOME:-/gpfs/share/apps/cuda/12.6}
+export PATH=${CUDA_HOME}/bin:${PATH}
+export LD_LIBRARY_PATH=${CUDA_HOME}/lib64:${LD_LIBRARY_PATH:-}
+
+if ! command -v nvcc >/dev/null; then
+    echo "ERROR: nvcc not on PATH (CUDA_HOME=${CUDA_HOME}); flash-attn cannot build." >&2
+    exit 1
+fi
+echo "CUDA_HOME=${CUDA_HOME}"
+nvcc --version | tail -2
+
+# A100 is sm_80; the 3090s on olab1 are sm_86. Building only what we run keeps
+# the compile from taking hours.
+export TORCH_CUDA_ARCH_LIST="8.0;8.6"
+
 cd "${REPO_ROOT}"
 
 uv venv --clear --python 3.11 .venv
