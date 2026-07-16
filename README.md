@@ -57,14 +57,32 @@ general replay).
 ## Train
 
 ```bash
-sbatch --gres=gpu:a100:2 --export=ALL,SIZE=1b,LR=1e-5 scripts/train_med.sbatch
-sbatch --gres=gpu:a100:4 --export=ALL,SIZE=4b,LR=1e-5 scripts/train_med.sbatch
-sbatch --gres=gpu:a100:8 --export=ALL,SIZE=27b,LORA=1 scripts/train_med.sbatch
+sbatch -p a100_short --gres=gpu:a100:2 --export=ALL,SIZE=1b,LR=1e-5 scripts/train_med.sbatch
+sbatch -p a100_short --gres=gpu:a100:4 --export=ALL,SIZE=4b,LR=1e-5 scripts/train_med.sbatch
+sbatch -p oermannlab --gres=gpu:a100:8 --export=ALL,SIZE=27b,LORA=1 scripts/train_med.sbatch
 ```
 
 Full fine-tuning at 1b/4b; LoRA defaults on at 12b/27b. Slack notifications fire
 on success and failure via `$SLACK_WEBHOOK_URL`; runs log to W&B project
 `gemma-med-ft`.
+
+Attention defaults to `eager` — transformers strongly recommends it over
+`flash_attention_2` for Gemma 3 training. Pass `ATTN=flash_attention_2` to trade
+that for speed once you've confirmed the loss curves agree.
+
+**Partition note.** `oermannlab`'s 24 A100s are frequently fully allocated (we've
+seen estimated starts a day out); `a100_short` usually has capacity. Some
+`a100_short` nodes hand out a GPU that reports itself free but rejects every
+allocation — the job preflights for this and requeues onto another node, up to 5
+times, so you generally don't need to care.
+
+### LR sweep
+
+The report publishes no LR for this stage (see RECIPE.md), so pick one:
+
+```bash
+bash scripts/sweep_lr.sh data/mix_default    # 5e-6 / 1e-5 / 2e-5 at 1b
+```
 
 ## Evaluate
 
