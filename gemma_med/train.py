@@ -74,7 +74,11 @@ def main():
     out.mkdir(parents=True, exist_ok=True)
 
     tok = AutoTokenizer.from_pretrained(args.model_path)
-    ensure_chat_template(tok)
+    # Must be the {% generation %} variant: TRL builds the completion-only mask
+    # from apply_chat_template(return_assistant_tokens_mask=True), which silently
+    # finds zero assistant tokens without those markers. We swap back to the
+    # stock template before saving so inference/vLLM get the official one.
+    ensure_chat_template(tok, for_training=True)
     if tok.pad_token is None:
         tok.pad_token = tok.eos_token
     # Gemma pads on the right for training; left-padding is a generation concern.
@@ -154,6 +158,9 @@ def main():
 
     trainer.train()
     trainer.save_model(str(out / "final"))
+    # Ship the stock template, not the training variant: {% generation %} is a
+    # training-time artifact and shouldn't leak into the released checkpoint.
+    ensure_chat_template(tok, for_training=False)
     tok.save_pretrained(str(out / "final"))
     log.info("saved -> %s", out / "final")
 
