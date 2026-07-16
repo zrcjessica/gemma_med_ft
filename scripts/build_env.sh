@@ -14,7 +14,12 @@ uv venv --clear --python 3.11 .venv
 uv sync
 source .venv/bin/activate
 
-# Must come after torch is importable; MAX_JOBS caps RAM during the CUDA build.
+# --no-build-isolation means flash-attn builds against THIS venv, so its build
+# deps must already be here: uv venv seeds nothing, and flash-attn doesn't
+# declare setuptools. torch must also be importable, hence the ordering.
+uv pip install setuptools wheel packaging ninja
+
+# MAX_JOBS caps parallel nvcc processes; the default OOMs the node.
 MAX_JOBS=8 uv pip install flash-attn==2.7.4.post1 --no-build-isolation
 
 python - <<'PY'
