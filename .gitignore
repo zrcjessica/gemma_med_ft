@@ -3,7 +3,8 @@ __pycache__/
 *.egg-info/
 outputs/
 checkpoints/
-data/
+/data/*
+!/data/jlens/
 slurm/logs/
 wandb/
 .env

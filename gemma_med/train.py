@@ -31,6 +31,7 @@ from transformers import AutoConfig, AutoModelForCausalLM, AutoTokenizer, set_se
 from trl import SFTConfig, SFTTrainer
 
 from .chat import RESPONSE_TEMPLATE, ensure_chat_template
+from .ckpt_schedule import LogSpacedCheckpointCallback
 
 log = logging.getLogger(__name__)
 
@@ -56,6 +57,18 @@ def parse_args():
     p.add_argument("--lora-r", type=int, default=16)
     p.add_argument("--lora-alpha", type=int, default=32)
     p.add_argument("--lora-dropout", type=float, default=0.05)
+
+    # Checkpointing for the interp-trajectory study. "log" saves at steps
+    # {1,2,4,8,...}+final (dense early, where representations move fastest);
+    # "uniform" is the stock every-N-steps behavior. See gemma_med.ckpt_schedule.
+    p.add_argument("--ckpt-schedule", choices=["log", "uniform"], default="log")
+    p.add_argument("--ckpt-log-base", type=float, default=2.0)
+    p.add_argument("--save-steps", type=int, default=500, help="Only used with --ckpt-schedule uniform.")
+    # The trajectory is the artifact for the interp analysis, so keep every
+    # checkpoint by default; --save-only-model makes that affordable on disk.
+    p.add_argument("--save-total-limit", type=int, default=None)
+    p.add_argument("--save-only-model", action="store_true",
+                   help="Drop optimizer/scheduler state: ~7x smaller checkpoints, but no resume.")
 
     p.add_argument("--gradient-checkpointing", action="store_true", default=True)
     p.add_argument("--no-gradient-checkpointing", dest="gradient_checkpointing", action="store_false")
@@ -136,15 +149,22 @@ def main():
         logging_steps=10,
         eval_strategy="steps",
         eval_steps=200,
-        save_strategy="steps",
-        save_steps=500,
-        save_total_limit=2,
+        # With "log", the callback owns saving via control.should_save, so the
+        # default flow must not also save uniformly.
+        save_strategy="no" if args.ckpt_schedule == "log" else "steps",
+        save_steps=args.save_steps,
+        save_total_limit=args.save_total_limit,
+        save_only_model=args.save_only_model,
         report_to="wandb",
         seed=args.seed,
         # Train on assistant turns only -- the report's "completion only" loss.
         assistant_only_loss=True,
         dataset_num_proc=8,
     )
+
+    callbacks = []
+    if args.ckpt_schedule == "log":
+        callbacks.append(LogSpacedCheckpointCallback(base=args.ckpt_log_base))
 
     trainer = SFTTrainer(
         model=model,
@@ -153,6 +173,7 @@ def main():
         eval_dataset=val,
         processing_class=tok,
         peft_config=peft_config,
+        callbacks=callbacks,
     )
 
     if trainer.is_world_process_zero():
