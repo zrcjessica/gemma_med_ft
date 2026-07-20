@@ -47,6 +47,14 @@ def check(model_path: str) -> bool:
         prefixes = sorted({k.split(".")[0] for k in unexpected})
         print(f"  unexpected top-level prefixes: {prefixes}")
 
+    # Quantify what train.py's freeze_vision_tower will catch (same match rule).
+    total = sum(p.numel() for p in model.parameters())
+    vision = sum(p.numel() for n, p in model.named_parameters()
+                 if "vision_tower" in n or "multi_modal_projector" in n)
+    if vision:
+        print(f"  vision-tower/projector params: {vision/1e6:.1f}M "
+              f"({100*vision/total:.1f}% of {total/1e9:.2f}B) -> frozen for text-only SFT")
+
     ok = True
     if missing:
         ok = False

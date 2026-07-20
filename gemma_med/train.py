@@ -11,8 +11,14 @@ match):
   NOT for this stage. Using them here underfits badly. Our defaults are
   conventional Gemma 3 SFT values; sweep with scripts/sweep_lr.sh.
 * Gemma 3 4b+ are Gemma3ForConditionalGeneration (a multimodal wrapper) even for
-  text-only use; 1b is Gemma3ForCausalLM. We load AutoModelForCausalLM and let
-  transformers pick, then train the language model only.
+  text-only use; 1b/270m are Gemma3ForCausalLM. AutoModelForCausalLM resolves the
+  4b+ checkpoints to the FULL Gemma3ForConditionalGeneration wrapper (NOT a
+  text-only submodel) -- verified by scripts/check_load_path.py: every LM weight
+  loads (missing_keys=0), and the vision tower rides along untrained. Text-only
+  batches (no pixel_values) route through the language model, so training is
+  correct; the vision tower just carries as dead weight unless frozen. We freeze
+  it (freeze_vision_tower) so it stays out of the optimizer state and its saved
+  checkpoints stay byte-identical to the base tower across the trajectory.
 """
 
 from __future__ import annotations
@@ -84,6 +90,21 @@ def parse_args():
     return p.parse_args()
 
 
+def freeze_vision_tower(model) -> int:
+    """Freeze vision-tower / multimodal-projector params on a Gemma3 wrapper.
+
+    No-op (returns 0) for the plain Gemma3ForCausalLM (1b/270m), which has no such
+    modules. Matches on the multimodal submodule names transformers uses.
+    """
+    n = 0
+    for name, p in model.named_parameters():
+        if "vision_tower" in name or "multi_modal_projector" in name:
+            if p.requires_grad:
+                p.requires_grad_(False)
+                n += p.numel()
+    return n
+
+
 def main():
     args = parse_args()
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
@@ -107,12 +128,31 @@ def main():
     log.info("model_type=%s architectures=%s", cfg.model_type, cfg.architectures)
 
     # Gemma 3 is bf16-native and A100s support it; fp16 overflows this family.
-    model = AutoModelForCausalLM.from_pretrained(
+    # 4b+ resolve to the full Gemma3ForConditionalGeneration wrapper here (not a
+    # text-only submodel) -- see the module docstring. output_loading_info lets us
+    # fail loudly if any LM weight is silently dropped/re-initialized rather than
+    # discovering a poisoned trajectory downstream.
+    model, loading_info = AutoModelForCausalLM.from_pretrained(
         args.model_path,
         torch_dtype=torch.bfloat16,
         attn_implementation=args.attn,
+        output_loading_info=True,
     )
+    missing = loading_info.get("missing_keys", [])
+    if missing:
+        raise RuntimeError(
+            f"{len(missing)} weights missing after load (would be re-initialized): "
+            f"{missing[:10]}{'...' if len(missing) > 10 else ''}"
+        )
     model.config.use_cache = False
+
+    # The wrapper carries a vision tower that gets no gradient under text-only
+    # data. Freeze it (full-FT only; LoRA already freezes the base) so it stays
+    # out of the optimizer state and its checkpoints stay identical to base.
+    if not args.lora:
+        frozen = freeze_vision_tower(model)
+        if frozen:
+            log.info("froze %d vision-tower/projector params (text-only SFT)", frozen)
 
     train = load_from_disk(str(Path(args.data_dir) / "train"))
     val = load_from_disk(str(Path(args.data_dir) / "val"))
