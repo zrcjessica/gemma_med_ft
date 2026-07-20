@@ -34,15 +34,32 @@ def top(tok, logits, k=5):
     return [tok.decode([t]) for t in logits.topk(k).indices.tolist()]
 
 
+def load_hf(model, dtype=torch.bfloat16):
+    """Gemma 3 at 4b+ is Gemma3ForConditionalGeneration, which may not map to the
+    CausalLM auto-class in transformers 5.x. Try loaders in order and report which
+    one wins so the same pattern can go into probe_jlens.py."""
+    errs = []
+    for name in ("AutoModelForCausalLM", "AutoModelForImageTextToText"):
+        cls = getattr(transformers, name, None)
+        if cls is None:
+            continue
+        try:
+            m = cls.from_pretrained(model, dtype=dtype)
+            print(f"load_hf: {name} OK", flush=True)
+            return m
+        except Exception as e:
+            errs.append(f"{name}: {type(e).__name__}: {e}")
+            print(f"load_hf: {name} FAILED -- {type(e).__name__}", flush=True)
+    raise RuntimeError("all loaders failed:\n" + "\n".join(errs))
+
+
 def main():
     print(f"transformers={transformers.__version__} torch={torch.__version__} "
           f"cuda={torch.cuda.is_available()}", flush=True)
 
     tok = transformers.AutoTokenizer.from_pretrained(MODEL)
-    hf = transformers.AutoModelForCausalLM.from_pretrained(
-        MODEL, torch_dtype=torch.bfloat16
-    ).cuda()
-    print(f"loaded {type(hf).__name__}", flush=True)
+    hf = load_hf(MODEL).cuda()
+    print(f"loaded {type(hf).__name__}  arch={hf.config.architectures}", flush=True)
 
     model = jlens.from_hf(hf, tok)
     print(f"layout={model.layout}  n_layers={model.n_layers}  d_model={model.d_model}",
