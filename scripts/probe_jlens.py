@@ -153,6 +153,22 @@ def jac_drift(base_jac, lens):
     }
 
 
+def load_hf(path, dtype):
+    """Gemma 3 at 4b+ is Gemma3ForConditionalGeneration (multimodal wrapper).
+    AutoModelForCausalLM maps it directly on transformers 5.x (verified 4b-it);
+    the ImageTextToText fallback is defensive insurance for other sizes."""
+    errs = []
+    for name in ("AutoModelForCausalLM", "AutoModelForImageTextToText"):
+        cls = getattr(transformers, name, None)
+        if cls is None:
+            continue
+        try:
+            return cls.from_pretrained(path, dtype=dtype)
+        except Exception as e:
+            errs.append(f"{name}: {type(e).__name__}: {e}")
+    raise RuntimeError("all loaders failed:\n" + "\n".join(errs))
+
+
 def main():
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
     args = parse_args()
@@ -184,7 +200,7 @@ def main():
             log.warning("skip step %d: LoRA adapter only (%s)", step, path)
             continue
         log.info("=== step %d :: %s ===", step, path)
-        hf = transformers.AutoModelForCausalLM.from_pretrained(path, dtype=dtype).to(args.device)
+        hf = load_hf(path, dtype).to(args.device)
         model = jlens.from_hf(hf, tok)
         lens = jlens.fit(model, corpus, dim_batch=args.dim_batch, max_seq_len=args.fit_max_seq)
 
