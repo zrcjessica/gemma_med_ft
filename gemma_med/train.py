@@ -86,6 +86,7 @@ def parse_args():
     # loss curves agree.
     p.add_argument("--attn", default="eager", choices=["flash_attention_2", "eager", "sdpa"])
     p.add_argument("--wandb-project", default="gemma-med-ft")
+    p.add_argument("--logging-steps", type=int, default=10)
     p.add_argument("--max-train-samples", type=int, default=None, help="Smoke-test escape hatch.")
     return p.parse_args()
 
@@ -186,7 +187,7 @@ def main():
         bf16=True,
         gradient_checkpointing=args.gradient_checkpointing,
         gradient_checkpointing_kwargs={"use_reentrant": False},
-        logging_steps=10,
+        logging_steps=args.logging_steps,
         eval_strategy="steps",
         eval_steps=200,
         # With "log", the callback owns saving via control.should_save, so the

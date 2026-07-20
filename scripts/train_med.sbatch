@@ -165,6 +165,7 @@ fi
 EXTRA=(--attn "${ATTN:-eager}")
 [[ "${LORA}" == "1" ]] && EXTRA+=(--lora)
 [[ -n "${MAX_TRAIN_SAMPLES:-}" ]] && EXTRA+=(--max-train-samples "${MAX_TRAIN_SAMPLES}")
+[[ -n "${LOGGING_STEPS:-}" ]] && EXTRA+=(--logging-steps "${LOGGING_STEPS}")
 
 LAUNCH=(python -m gemma_med.train)
 if [[ "${NUM_GPUS}" -gt 1 ]]; then
