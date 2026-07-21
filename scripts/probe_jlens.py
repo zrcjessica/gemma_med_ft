@@ -154,11 +154,26 @@ def jac_drift(base_jac, lens):
 
 
 def load_hf(path, dtype):
-    """Gemma 3 at 4b+ is Gemma3ForConditionalGeneration (multimodal wrapper).
-    AutoModelForCausalLM maps it directly on transformers 5.x (verified 4b-it);
-    the ImageTextToText fallback is defensive insurance for other sizes."""
+    """Load every trajectory point as the text-only Gemma3ForCausalLM.
+
+    The 4b+ *base* checkpoints declare Gemma3ForConditionalGeneration, but
+    train.py saves text-only Gemma3ForCausalLM (model_type=gemma3_text). Letting
+    Auto* pick per-path would measure t=0 through the multimodal wrapper and
+    every later point through the text model -- two different forwards on one
+    trajectory, which silently corrupts drift (measured relative to the t=0 lens)
+    and the concordance comparison. Forcing the text submodel keeps all points on
+    one code path; the vision tower is irrelevant to a text-only lens and is
+    dropped into unexpected_keys.
+    """
     errs = []
-    for name in ("AutoModelForCausalLM", "AutoModelForImageTextToText"):
+    order = ["AutoModelForCausalLM", "AutoModelForImageTextToText"]
+    try:
+        cfg = transformers.AutoConfig.from_pretrained(path)
+        if "Gemma3ForConditionalGeneration" in (cfg.architectures or []):
+            order.insert(0, "Gemma3ForCausalLM")
+    except Exception as e:
+        errs.append(f"AutoConfig: {type(e).__name__}: {e}")
+    for name in order:
         cls = getattr(transformers, name, None)
         if cls is None:
             continue
