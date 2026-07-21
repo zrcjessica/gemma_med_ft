@@ -164,7 +164,7 @@ def load_hf(path, dtype):
     and the concordance comparison. Forcing the text submodel keeps all points on
     one code path; the vision tower is irrelevant to a text-only lens and is
     dropped into unexpected_keys.
-    """
+
     Loaders are tried in order and a load that leaves ANY weight missing is
     rejected, not accepted. transformers 4.53.2 remaps the base's nested
     `language_model.model.*` keys onto Gemma3ForCausalLM's `model.*`, but 5.14.1
