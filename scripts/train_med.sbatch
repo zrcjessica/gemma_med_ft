@@ -110,6 +110,10 @@ export HF_HOME=${HF_HOME:-/gpfs/data/oermannlab/users/zhouj14/hf}
 export HF_HUB_OFFLINE=1          # data + weights are prestaged; don't hit the hub mid-run
 export OMP_NUM_THREADS=${SLURM_CPUS_PER_TASK:-16}
 export TOKENIZERS_PARALLELISM=false
+# Gemma 3's 262k vocab makes the fp32 logits upcast in the loss the single
+# largest allocation (PER_DEV_BS x seq x 262144 x 4B -- 16GiB at bs=8/seq2048).
+# expandable_segments cuts fragmentation around those big transient tensors.
+export PYTORCH_CUDA_ALLOC_CONF=${PYTORCH_CUDA_ALLOC_CONF:-expandable_segments:True}
 export PYTHONUNBUFFERED=1
 export WANDB_PROJECT=gemma-med-ft
 export ACCELERATE_LOG_LEVEL=info
