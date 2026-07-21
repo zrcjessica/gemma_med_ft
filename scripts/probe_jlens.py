@@ -165,6 +165,17 @@ def load_hf(path, dtype):
     one code path; the vision tower is irrelevant to a text-only lens and is
     dropped into unexpected_keys.
     """
+    Loaders are tried in order and a load that leaves ANY weight missing is
+    rejected, not accepted. transformers 4.53.2 remaps the base's nested
+    `language_model.model.*` keys onto Gemma3ForCausalLM's `model.*`, but 5.14.1
+    (this env) does NOT -- it silently random-initializes all 444 LM tensors and
+    only whispers about it in a log note. A randomly-initialized t=0 origin
+    produces a plausible-looking but meaningless trajectory, so treat missing
+    keys as fatal for that loader and fall through.
+
+    Prefer scripts/make_text_base.py to pre-convert a 4b+ base into a text-only
+    checkpoint so t=0 and every later point share one class and one key layout.
+    """
     errs = []
     order = ["AutoModelForCausalLM", "AutoModelForImageTextToText"]
     try:
@@ -178,10 +189,17 @@ def load_hf(path, dtype):
         if cls is None:
             continue
         try:
-            return cls.from_pretrained(path, dtype=dtype)
+            model, info = cls.from_pretrained(path, dtype=dtype, output_loading_info=True)
         except Exception as e:
             errs.append(f"{name}: {type(e).__name__}: {e}")
-    raise RuntimeError("all loaders failed:\n" + "\n".join(errs))
+            continue
+        missing = info.get("missing_keys", [])
+        if missing:
+            errs.append(f"{name}: {len(missing)} MISSING weights (would be random): {missing[:4]}")
+            del model
+            continue
+        return model
+    raise RuntimeError("no loader populated all weights:\n" + "\n".join(errs))
 
 
 def main():
