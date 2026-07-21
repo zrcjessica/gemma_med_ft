@@ -10,15 +10,19 @@ match):
   adapting an already-instruction-tuned MedGemma to a narrow downstream task,
   NOT for this stage. Using them here underfits badly. Our defaults are
   conventional Gemma 3 SFT values; sweep with scripts/sweep_lr.sh.
-* Gemma 3 4b+ are Gemma3ForConditionalGeneration (a multimodal wrapper) even for
-  text-only use; 1b/270m are Gemma3ForCausalLM. AutoModelForCausalLM resolves the
-  4b+ checkpoints to the FULL Gemma3ForConditionalGeneration wrapper (NOT a
-  text-only submodel) -- verified by scripts/check_load_path.py: every LM weight
-  loads (missing_keys=0), and the vision tower rides along untrained. Text-only
-  batches (no pixel_values) route through the language model, so training is
-  correct; the vision tower just carries as dead weight unless frozen. We freeze
-  it (freeze_vision_tower) so it stays out of the optimizer state and its saved
-  checkpoints stay byte-identical to the base tower across the trajectory.
+* Gemma 3 4b+ checkpoints declare the Gemma3ForConditionalGeneration multimodal
+  wrapper; 1b/270m are plain Gemma3ForCausalLM. We force ALL sizes to load as
+  Gemma3ForCausalLM for text-only SFT. This is deliberate, not incidental:
+  Gemma3ForConditionalGeneration.forward hand-rolls its loss with a per-microbatch
+  nn.CrossEntropyLoss and sets accepts_loss_kwargs=False (transformers 4.53.2),
+  so under gradient accumulation it mis-normalizes -- and it also produces a much
+  worse base-model loss than the text submodel (4b wrapper ~14 vs 1b CausalLM ~2
+  on step 1 of the same data; see the memory note / check_load_path.py). Loading
+  as Gemma3ForCausalLM uses the correct self.loss_function path, drops the ~420M
+  vision tower entirely (missing_keys=0; only vision_tower/multi_modal_projector
+  land in unexpected_keys, which is what we want), and unifies every size onto the
+  jlens-verified CausalLM path. Vision stays deferrable: the base tower is
+  reattachable to any text checkpoint for the later multimodal recipe.
 """
 
 from __future__ import annotations
@@ -33,7 +37,13 @@ import torch
 import transformers
 from datasets import load_from_disk
 from peft import LoraConfig
-from transformers import AutoConfig, AutoModelForCausalLM, AutoTokenizer, set_seed
+from transformers import (
+    AutoConfig,
+    AutoModelForCausalLM,
+    AutoTokenizer,
+    Gemma3ForCausalLM,
+    set_seed,
+)
 from trl import SFTConfig, SFTTrainer
 
 from .chat import RESPONSE_TEMPLATE, ensure_chat_template
@@ -91,21 +101,6 @@ def parse_args():
     return p.parse_args()
 
 
-def freeze_vision_tower(model) -> int:
-    """Freeze vision-tower / multimodal-projector params on a Gemma3 wrapper.
-
-    No-op (returns 0) for the plain Gemma3ForCausalLM (1b/270m), which has no such
-    modules. Matches on the multimodal submodule names transformers uses.
-    """
-    n = 0
-    for name, p in model.named_parameters():
-        if "vision_tower" in name or "multi_modal_projector" in name:
-            if p.requires_grad:
-                p.requires_grad_(False)
-                n += p.numel()
-    return n
-
-
 def main():
     args = parse_args()
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
@@ -126,34 +121,37 @@ def main():
     tok.padding_side = "right"
 
     cfg = AutoConfig.from_pretrained(args.model_path)
-    log.info("model_type=%s architectures=%s", cfg.model_type, cfg.architectures)
+    is_wrapper = "Gemma3ForConditionalGeneration" in (cfg.architectures or [])
+    log.info("model_type=%s architectures=%s -> load as Gemma3ForCausalLM (wrapper=%s)",
+             cfg.model_type, cfg.architectures, is_wrapper)
 
     # Gemma 3 is bf16-native and A100s support it; fp16 overflows this family.
-    # 4b+ resolve to the full Gemma3ForConditionalGeneration wrapper here (not a
-    # text-only submodel) -- see the module docstring. output_loading_info lets us
-    # fail loudly if any LM weight is silently dropped/re-initialized rather than
-    # discovering a poisoned trajectory downstream.
-    model, loading_info = AutoModelForCausalLM.from_pretrained(
+    # Force Gemma3ForCausalLM for every size (see module docstring): for 4b+ this
+    # loads the text submodel from the multimodal checkpoint and drops the vision
+    # tower, avoiding the wrapper's broken text-only loss path. Only the vision
+    # weights should be missing from the *checkpoint's* perspective, so we assert
+    # on missing_keys (LM weights that failed to load) and expect vision keys to
+    # appear as unexpected -- exactly the head we want gone.
+    Loader = Gemma3ForCausalLM if is_wrapper else AutoModelForCausalLM
+    model, loading_info = Loader.from_pretrained(
         args.model_path,
         torch_dtype=torch.bfloat16,
         attn_implementation=args.attn,
         output_loading_info=True,
     )
+    if type(model).__name__ != "Gemma3ForCausalLM":
+        raise RuntimeError(f"expected Gemma3ForCausalLM, got {type(model).__name__}")
     missing = loading_info.get("missing_keys", [])
     if missing:
         raise RuntimeError(
             f"{len(missing)} weights missing after load (would be re-initialized): "
             f"{missing[:10]}{'...' if len(missing) > 10 else ''}"
         )
+    unexpected = loading_info.get("unexpected_keys", [])
+    if unexpected:
+        dropped = sorted({k.split(".")[0] for k in unexpected})
+        log.info("dropped %d non-LM weights (text-only): %s", len(unexpected), dropped)
     model.config.use_cache = False
-
-    # The wrapper carries a vision tower that gets no gradient under text-only
-    # data. Freeze it (full-FT only; LoRA already freezes the base) so it stays
-    # out of the optimizer state and its checkpoints stay identical to base.
-    if not args.lora:
-        frozen = freeze_vision_tower(model)
-        if frozen:
-            log.info("froze %d vision-tower/projector params (text-only SFT)", frozen)
 
     train = load_from_disk(str(Path(args.data_dir) / "train"))
     val = load_from_disk(str(Path(args.data_dir) / "val"))
