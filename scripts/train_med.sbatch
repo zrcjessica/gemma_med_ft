@@ -166,11 +166,20 @@ EXTRA=(--attn "${ATTN:-eager}")
 [[ "${LORA}" == "1" ]] && EXTRA+=(--lora)
 [[ -n "${MAX_TRAIN_SAMPLES:-}" ]] && EXTRA+=(--max-train-samples "${MAX_TRAIN_SAMPLES}")
 [[ -n "${LOGGING_STEPS:-}" ]] && EXTRA+=(--logging-steps "${LOGGING_STEPS}")
+# Drop optimizer/scheduler state: the trajectory needs weights, not resumability,
+# and full ZeRO-3 state is ~5x the size (44G vs ~8.6G per 4b checkpoint). Set
+# SAVE_ONLY_MODEL=0 to keep it when you need to resume a long run.
+[[ "${SAVE_ONLY_MODEL:-1}" == "1" ]] && EXTRA+=(--save-only-model)
 
 LAUNCH=(python -m gemma_med.train)
 if [[ "${NUM_GPUS}" -gt 1 ]]; then
+    # --zero3_save_16bit_model is REQUIRED, not optional: without it ZeRO-3 leaves
+    # each checkpoint as sharded DeepSpeed state under global_step*/ with no
+    # model.safetensors at all, and the jlens probe (which loads HF format) can't
+    # read them. Phase 0 only escaped this because 270m ran single-GPU.
     LAUNCH=(accelerate launch --num_processes "${NUM_GPUS}" --mixed_precision bf16
             --use_deepspeed --zero_stage 3 --gradient_clipping 1.0
+            --zero3_save_16bit_model true
             -m gemma_med.train)
 fi
 
