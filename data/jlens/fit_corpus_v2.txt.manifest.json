@@ -1,0 +1,14 @@
+{
+  "n_prompts": 1000,
+  "min_chars": 600,
+  "rewrapped_multiline": 0,
+  "source": "jlens.examples.load_wikitext_prompts (Salesforce/wikitext, wikitext-103-raw-v1, train)",
+  "spec": "jacobian-lens README: 1000 sequences of 128 tokens, pretraining-like",
+  "truncation": "left to jlens.fit(max_seq_len=128)",
+  "tokens": {
+    "min": 102,
+    "max": 621,
+    "under_128": 34
+  },
+  "valid_source_positions": 110741
+}
