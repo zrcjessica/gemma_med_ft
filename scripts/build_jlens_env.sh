@@ -21,11 +21,13 @@ source .venv-jlens/bin/activate
 # module-loaded cuda/12.6 on BigPurple's A100 nodes.
 uv pip install torch==2.6.0 --index-url https://download.pytorch.org/whl/cu124
 # transformers is pinned (not just >=5.5) so rebuilds are reproducible; wandb for
-# the trajectory logging convention.
+# the trajectory logging convention; datasets so jlens.examples.load_wikitext_prompts
+# works (scripts/build_fit_corpus.py) -- it is a lazy import inside that function.
 uv pip install \
     "jlens @ git+https://github.com/anthropics/jacobian-lens@${JLENS_SHA}" \
     "transformers==5.14.1" \
-    wandb
+    wandb \
+    datasets
 
 python - <<'PY'
 from importlib.metadata import version
