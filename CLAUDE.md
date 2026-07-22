@@ -67,10 +67,18 @@ resolves and logs the revision. Use `HF_HOME=/gpfs/data/oermannlab/users/yeb04/h
 - **`.venv-jlens`** — the Jacobian-lens probe **only**. `jlens` requires
   `transformers>=5.5` (5.14.1, torch 2.6.0+cu124, + `wandb`), which is
   **hard-incompatible** with the training pin. Never merge these. Built by
-  `scripts/build_jlens_env.sh`, which pins `jlens` to commit `581d398`. A
-  read-only reference clone at the same commit lives at the sibling
-  `~/jacobian-lens` on olab1 (source, `walkthrough.ipynb`, and the paper's curated
-  prompt sets under `data/` + the `vis.py` lens visualization).
+  `scripts/build_jlens_env.sh`, which pins `jlens` to commit `581d398` and adds
+  `datasets` (a lazy import inside `jlens.examples`). The same commit is checked
+  out at the sibling `~/jacobian-lens` on olab1 — don't *edit* it, but do **call
+  it**: `jlens` is installed in `.venv-jlens` from this SHA, so everything in
+  `jlens/*.py` is importable, and it *is* the paper's method — a hand-rolled
+  equivalent is a deviation we'd have to defend. `grep -rn` the package source
+  before writing any helper; the surface is wider than the README:
+  `examples.py` has `load_wikitext_prompts` (the fit corpus) and the curated
+  `EXAMPLES`/`resolve_prompt`, `vis.py` has the slice visualization, `fitting.py`
+  documents the estimator, and `data/evaluations/` + `data/experiments/` hold the
+  paper's prompt sets. If a packaging split blocks the import, fix the packaging
+  (check `uv pip install --dry-run` is additive) rather than reimplementing.
 
 ## Training conventions for the trajectory
 
