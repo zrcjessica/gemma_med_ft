@@ -1,108 +1,82 @@
-"""Build the frozen jlens fit corpus to the paper's spec.
+"""Materialize the frozen jlens fit corpus using jlens's own WikiText loader.
 
 The jacobian-lens README specifies the released lenses were fit on "1000
-sequences of 128 tokens from a pretraining-like corpus". This packs wikitext
-into fixed-length token windows and writes them one-per-line, the format
-probe_jlens.py expects.
+sequences of 128 tokens from a pretraining-like corpus", and the repo ships
+the loader that produces them: jlens.examples.load_wikitext_prompts takes the
+first n records of >= min_chars from wikitext-103-raw-v1 and leaves the
+truncation to fit(max_seq_len=128). We call that function rather than
+reimplementing it, so our corpus cannot drift from the reference.
 
-Sequence length matters more than it looks: jlens.fitting skips the first
-SKIP_FIRST_N_POSITIONS=16 positions of every sequence, so a 128-token window
-contributes ~111 valid source positions while a single sentence contributes
-~14. Do not shorten seq_tokens without re-reading that.
+We only materialize it to a file because this is a *trajectory* study: the same
+corpus must be fed to every checkpoint, size and arm, so it has to be frozen and
+version-controlled rather than re-streamed per run.
 
-The output is FROZEN -- every checkpoint, size and arm must be fit on the same
-file for the trajectory to mean anything. Regenerating with a different seed or
-spec invalidates comparison with existing metrics.jsonl.
+Sequence length is the thing not to fiddle with -- jlens.fitting skips the first
+SKIP_FIRST_N_POSITIONS=16 positions of every sequence, so a 128-token record
+contributes ~111 valid source positions where a single sentence contributes ~14.
+
+Run in .venv-jlens (needs jlens + datasets). Output is FROZEN: regenerating with
+a different n/min_chars invalidates comparison with existing metrics.jsonl.
 """
 
 from __future__ import annotations
 
 import argparse
 import json
-import random
-import re
 from pathlib import Path
 
-import pyarrow.parquet as pq
-from transformers import AutoTokenizer
-
-HEADER_RE = re.compile(r"^=+ .* =+$")
+from jlens.examples import load_wikitext_prompts
 
 
 def parse_args():
     p = argparse.ArgumentParser()
-    p.add_argument("--parquet-dir", required=True,
-                   help="Dir of wikitext train-*.parquet shards.")
-    p.add_argument("--tokenizer", required=True)
     p.add_argument("--out", required=True)
-    p.add_argument("--n-seqs", type=int, default=1000)
-    p.add_argument("--seq-tokens", type=int, default=128,
-                   help="Target length after the probe re-tokenizes.")
-    p.add_argument("--headroom", type=int, default=16,
-                   help="Extra tokens per window to absorb decode/re-encode drift.")
-    p.add_argument("--candidate-mult", type=int, default=20,
-                   help="Chunk this many times n_seqs before sampling, for diversity.")
-    p.add_argument("--seed", type=int, default=0)
+    p.add_argument("--n-prompts", type=int, default=1000)
+    p.add_argument("--min-chars", type=int, default=600,
+                   help="jlens default; ~600 chars clears 128 tokens.")
+    p.add_argument("--tokenizer", default=None,
+                   help="If set, report the token-length distribution.")
     return p.parse_args()
-
-
-def iter_lines(parquet_dir: Path):
-    for shard in sorted(parquet_dir.glob("train-*.parquet")):
-        for batch in pq.ParquetFile(shard).iter_batches(columns=["text"]):
-            for text in batch.column("text").to_pylist():
-                line = (text or "").strip()
-                if line and not HEADER_RE.match(line):
-                    yield line
 
 
 def main():
     args = parse_args()
-    tok = AutoTokenizer.from_pretrained(args.tokenizer)
-    window = args.seq_tokens + args.headroom
-    n_candidates = args.n_seqs * args.candidate_mult
+    prompts = load_wikitext_prompts(args.n_prompts, min_chars=args.min_chars)
+    if len(prompts) != args.n_prompts:
+        raise SystemExit(f"got {len(prompts)} prompts, wanted {args.n_prompts}")
 
-    ids: list[int] = []
-    chunks: list[list[int]] = []
-    for line in iter_lines(Path(args.parquet_dir)):
-        ids.extend(tok(line, add_special_tokens=False).input_ids)
-        while len(ids) >= window:
-            chunks.append(ids[:window])
-            ids = ids[window:]
-        if len(chunks) >= n_candidates:
-            break
-
-    if len(chunks) < args.n_seqs:
-        raise SystemExit(f"only {len(chunks)} chunks available, need {args.n_seqs}")
-
-    rng = random.Random(args.seed)
-    picked = rng.sample(chunks, args.n_seqs)
-
-    seqs, lens = [], []
-    for chunk in picked:
-        text = " ".join(tok.decode(chunk).split())
-        n = len(tok(text).input_ids)
-        if n < args.seq_tokens:
-            continue
-        seqs.append(text)
-        lens.append(n)
+    # The corpus file is one sequence per line; wikitext records are single-line
+    # but normalize defensively so a stray newline cannot split one in two.
+    seqs, rewrapped = [], 0
+    for text in prompts:
+        flat = " ".join(text.split())
+        if len(text.strip().splitlines()) > 1:
+            rewrapped += 1
+        seqs.append(flat)
 
     out = Path(args.out)
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text("\n".join(seqs) + "\n")
 
     manifest = {
-        "n_seqs": len(seqs),
-        "seq_tokens_target": args.seq_tokens,
-        "window_tokens": window,
-        "retokenized_len": {"min": min(lens), "max": max(lens)},
-        "source": str(args.parquet_dir),
-        "tokenizer": args.tokenizer,
-        "seed": args.seed,
+        "n_prompts": len(seqs),
+        "min_chars": args.min_chars,
+        "rewrapped_multiline": rewrapped,
+        "source": "jlens.examples.load_wikitext_prompts (Salesforce/wikitext, wikitext-103-raw-v1, train)",
         "spec": "jacobian-lens README: 1000 sequences of 128 tokens, pretraining-like",
+        "truncation": "left to jlens.fit(max_seq_len=128)",
     }
+    if args.tokenizer:
+        from transformers import AutoTokenizer
+        tok = AutoTokenizer.from_pretrained(args.tokenizer)
+        ns = [len(tok(s).input_ids) for s in seqs]
+        valid = [max(0, min(n, 128) - 1 - 16) for n in ns]
+        manifest["tokens"] = {"min": min(ns), "max": max(ns),
+                              "under_128": sum(1 for n in ns if n < 128)}
+        manifest["valid_source_positions"] = sum(valid)
+
     Path(str(out) + ".manifest.json").write_text(json.dumps(manifest, indent=2) + "\n")
     print(json.dumps(manifest, indent=2))
-    print(f"dropped {args.n_seqs - len(seqs)} short sequences")
 
 
 if __name__ == "__main__":
