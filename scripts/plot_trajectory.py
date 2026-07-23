@@ -13,6 +13,7 @@ import json
 from pathlib import Path
 
 import matplotlib as mpl
+mpl.use("Agg")
 import matplotlib.pyplot as plt
 
 # --- palette (dataviz reference, slots 1-3, validated all-pairs both modes) ---
@@ -76,18 +77,80 @@ def _series(ax, x, y, color, marker, label):
             mew=1.6, mec=color, label=label, linestyle="-")
 
 
+def _baseline(ax, x, y0, color):
+    """Dashed reference at the base-model (t=0) value: every finetuned point is
+    read against the untuned baseline, not just against the other arm."""
+    ax.axhline(y0, color=color, lw=1.1, ls=(0, (5, 3)), alpha=0.55, zorder=1)
+
+
 def plot_conc(rows, steps, x, key, ylabel, title, out):
     fig, ax = plt.subplots(figsize=(7.2, 4.2))
     g = [r["concordance"]["general"][key] for r in rows]
     m = [r["concordance"]["medical"][key] for r in rows]
+    _baseline(ax, x, g[0], GENERAL)
+    _baseline(ax, x, m[0], MEDICAL)
     _series(ax, x, g, GENERAL, "o", "general (control)")
     _series(ax, x, m, MEDICAL, "s", "medical")
+    # annotate the untuned-base reference so the dashes are unambiguous
+    ax.text(x[-1], m[0], "  base (t=0)", va="center", ha="left",
+            fontsize=7.5, color=MEDICAL, alpha=0.8)
     ax.set_ylabel(ylabel)
     ax.set_title(title, loc="left", color=INK)
     ax.legend(loc="best", fontsize=9)
     style_x(ax, steps, x)
     fig.savefig(out, bbox_inches="tight")
     plt.close(fig)
+
+
+def plot_base_vs_final(rows, out):
+    """Direct base(t=0) vs finetuned-final comparison — the change medical SFT
+    actually produced, per metric and per arm."""
+    b, f = rows[0], rows[-1]
+    specs = [
+        ("KL general\n(nats)",  b["concordance"]["general"]["kl_final"],
+                                 f["concordance"]["general"]["kl_final"], GENERAL),
+        ("KL medical\n(nats)",  b["concordance"]["medical"]["kl_final"],
+                                 f["concordance"]["medical"]["kl_final"], MEDICAL),
+        ("top-1 general\n(frac)", b["concordance"]["general"]["top1_final"],
+                                   f["concordance"]["general"]["top1_final"], GENERAL),
+        ("top-1 medical\n(frac)", b["concordance"]["medical"]["top1_final"],
+                                   f["concordance"]["medical"]["top1_final"], MEDICAL),
+    ]
+    fig, ax = plt.subplots(figsize=(7.6, 4.2))
+    xs = list(range(len(specs)))
+    w = 0.36
+    for i, (_, bv, fv, c) in enumerate(specs):
+        ax.bar(i - w / 2, bv, w, color=c, alpha=0.35, edgecolor=c, lw=1.2)
+        ax.bar(i + w / 2, fv, w, color=c, alpha=0.95, edgecolor=c, lw=1.2)
+        d = fv - bv
+        ax.annotate(f"{d:+.2f}", (i, max(bv, fv)), textcoords="offset points",
+                    xytext=(0, 4), ha="center", fontsize=8, color=MUTED)
+    ax.set_xticks(xs)
+    ax.set_xticklabels([s for s, *_ in specs], fontsize=8)
+    ax.set_ylabel("value (Δ = final − base)")
+    ax.set_title("Medical SFT vs. untuned baseline — net change at the final checkpoint",
+                 loc="left", color=INK)
+    # neutral shading legend: the base/final split is the fill alpha, not the arm color
+    from matplotlib.patches import Patch
+    handles = [Patch(facecolor=MUTED, alpha=0.35, edgecolor=MUTED, label="base (t=0)"),
+               Patch(facecolor=MUTED, alpha=0.95, edgecolor=MUTED, label="finetuned (final)")]
+    ax.legend(handles=handles, loc="upper right", fontsize=9)
+    ax.grid(axis="y", alpha=0.7); ax.set_axisbelow(True)
+    fig.savefig(out, bbox_inches="tight")
+    plt.close(fig)
+
+
+def print_base_vs_final(rows):
+    b, f = rows[0], rows[-1]
+    print(f"\nbase (t=0) -> finetuned (step {f['step']}) delta:")
+    for arm in ("general", "medical"):
+        for key in ("kl_final", "top1_final"):
+            bv = b["concordance"][arm][key]
+            fv = f["concordance"][arm][key]
+            print(f"  {arm:8s} {key:11s} {bv:7.3f} -> {fv:7.3f}  ({fv - bv:+.3f})")
+    print(f"  drift    relfro_mean {b['drift']['relfro_mean']:7.3f} -> "
+          f"{f['drift']['relfro_mean']:7.3f}  "
+          f"({f['drift']['relfro_mean'] - b['drift']['relfro_mean']:+.3f})")
 
 
 def plot_overview(rows, steps, x, out):
@@ -102,6 +165,8 @@ def plot_overview(rows, steps, x, out):
     ]:
         g = [r["concordance"]["general"][key] for r in rows]
         m = [r["concordance"]["medical"][key] for r in rows]
+        _baseline(ax, x, g[0], GENERAL)
+        _baseline(ax, x, m[0], MEDICAL)
         _series(ax, x, g, GENERAL, "o", "general")
         _series(ax, x, m, MEDICAL, "s", "medical")
         ax.set_title(ttl, loc="left", color=INK); ax.set_ylabel(yl)
@@ -133,7 +198,9 @@ def main():
               "Top-1 agreement is noise-dominated at 15 prompts / arm",
               out / "fig_top1.pdf")
     plot_overview(rows, steps, x, out / "fig_overview.png")
+    plot_base_vs_final(rows, out / "fig_base_vs_final.pdf")
     print("wrote:", *(p.name for p in sorted(out.glob("fig_*"))))
+    print_base_vs_final(rows)
 
 
 if __name__ == "__main__":

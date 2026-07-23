@@ -204,27 +204,49 @@
   \end{columns}
 \end{frame}
 
+\begin{frame}{Vs.\ the untuned baseline: net change is small}
+  \begin{columns}[c]
+    \begin{column}{0.62\textwidth}
+      \includegraphics[width=\textwidth]{\figpath{fig_base_vs_final.pdf}}
+    \end{column}
+    \begin{column}{0.36\textwidth}
+      \small
+      Endpoint summary --- base ($t{=}0$) vs.\ the final checkpoint, the change
+      medical SFT actually produced. (The trajectory panels read \emph{every}
+      checkpoint against this dashed baseline.)
+      \\[0.5em]
+      Faithfulness barely moves: \gen\ KL \textbf{$3.05\!\to\!3.18$} ($+0.13$),
+      \med\ KL \textbf{$4.03\!\to\!4.01$} ($-0.01$). The $\sim$1-nat \med--\gen\
+      gap is \emph{inherited} from the base, not opened by fine-tuning.
+      \\[0.5em]
+      The real motion is in the \textbf{Jacobian} (drift $0\!\to\!0.28$), not in
+      lens$\leftrightarrow$model concordance.
+    \end{column}
+  \end{columns}
+\end{frame}
+
 \begin{frame}{Findings \& next steps}
   \textbf{Findings}
-  \begin{itemize}\setlength\itemsep{0.25em}
+  \begin{itemize}\setlength\itemsep{0.15em}
     \item $J_\ell$ reorganizes in the first $\sim$64 steps, then plateaus ---
           the strongest, cleanest signal in the run.
-    \item The lens is measurably less faithful on \med\ than \gen\ content
-          ($\sim$1 nat KL), stable across the trajectory.
+    \item Vs.\ the base, endpoint faithfulness barely moves
+          ($|\Delta\mathrm{KL}|\le0.13$ nat); the $\sim$1-nat \med--\gen\ gap is
+          \emph{inherited} from $t{=}0$, not opened by fine-tuning.
     \item KL is smooth and readable; top-1 is noise-limited at the current
           probe-set size.
   \end{itemize}
-  \vspace{0.4em}
+  \vspace{0.3em}
   \textbf{Fix before scaling}
-  \begin{itemize}\setlength\itemsep{0.25em}
+  \begin{itemize}\setlength\itemsep{0.15em}
     \item \texttt{checkpoint-1} $\equiv$ base --- drop or shift the first
           log-schedule point.
     \item Non-resumable fit: 12b/27b need a per-step checkpoint path before a
           long fit can survive a requeue.
   \end{itemize}
-  \vspace{0.4em}
+  \vspace{0.3em}
   \textbf{Next}
-  \begin{itemize}\setlength\itemsep{0.25em}
+  \begin{itemize}\setlength\itemsep{0.15em}
     \item Expand + re-freeze the probe set; re-probe.
     \item Pair with the behavioral trajectory (MedQA / MedMCQA / PubMedQA).
     \item Second real trajectory: 1b-\emph{pt} (the pt-vs-it starting-point axis).
