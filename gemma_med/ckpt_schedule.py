@@ -41,6 +41,12 @@ class LogSpacedCheckpointCallback(TrainerCallback):
 
     def on_train_begin(self, args, state, control, **kwargs):
         self._steps = log_spaced_steps(state.max_steps, self.base, self.include_final)
+        # Under an LR-warmup schedule the first optimizer step applies lr=0, so
+        # checkpoint-1 is bit-identical to the t=0 base the probe already prepends
+        # (verified: 1b-it checkpoint-1 == base, max|Δ|=0). Drop it as a redundant
+        # save. A no-warmup run has a meaningful step 1, so keep it there.
+        if args.get_warmup_steps(state.max_steps) >= 1:
+            self._steps.discard(1)
         return control
 
     def on_step_end(self, args, state, control, **kwargs):

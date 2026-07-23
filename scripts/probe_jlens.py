@@ -56,6 +56,10 @@ def parse_args():
     p.add_argument("--apply-position", type=int, default=-1,
                    help="Token position read out on each probe prompt.")
     p.add_argument("--save-lenses", action="store_true")
+    p.add_argument("--fit-ckpt-every", type=int, default=50,
+                   help="Write a resumable fit checkpoint every N prompts (0 disables).")
+    p.add_argument("--fresh", action="store_true",
+                   help="Discard any existing metrics.jsonl and refit from scratch.")
     p.add_argument("--dtype", default="bfloat16", choices=["bfloat16", "float16", "float32"])
     p.add_argument("--device", default="cuda")
     p.add_argument("--wandb-project", default=None)
@@ -211,7 +215,22 @@ def main():
     out.mkdir(parents=True, exist_ok=True)
     (out / "lenses").mkdir(exist_ok=True) if args.save_lenses else None
     metrics_path = out / "metrics.jsonl"
-    metrics_path.write_text("")  # fresh trajectory
+    fit_ckpt_dir = out / ".fit_ckpt"          # per-step resumable fit state
+    fit_ckpt_dir.mkdir(exist_ok=True)
+    base_lens_path = out / ".base_lens.pt"    # drift baseline, so resume needn't refit t=0
+
+    # Resume: skip checkpoints already written to metrics.jsonl so a requeue picks
+    # up where it died instead of wiping the trajectory and restarting.
+    done_steps: set[int] = set()
+    if args.fresh or not metrics_path.exists():
+        metrics_path.write_text("")
+        base_lens_path.unlink(missing_ok=True)
+    else:
+        for line in metrics_path.read_text().splitlines():
+            if line.strip():
+                done_steps.add(json.loads(line)["step"])
+        if done_steps:
+            log.info("resuming: %d checkpoints already in %s", len(done_steps), metrics_path)
 
     tok = transformers.AutoTokenizer.from_pretrained(args.base_model)
     corpus = [l for l in Path(args.fit_corpus).read_text().splitlines() if l.strip()]
@@ -227,23 +246,40 @@ def main():
         wb = wandb.init(project=args.wandb_project, name=args.wandb_run,
                         config=vars(args), job_type="jlens-probe")
 
+    # Drift is measured against the t=0 lens. On resume it may already be on disk;
+    # otherwise it is populated when step 0 (base) is processed below.
     base_jac = None
+    if base_lens_path.exists():
+        bl = jlens.JacobianLens.from_pretrained(str(base_lens_path))
+        base_jac = {L: bl.jacobians[L].detach().float().cpu() for L in bl.source_layers}
+        del bl
+
     for step, path in ckpts:
+        if step in done_steps:
+            log.info("skip step %d (already in metrics)", step)
+            continue
         if not is_full_model(path):
             log.warning("skip step %d: LoRA adapter only (%s)", step, path)
             continue
         log.info("=== step %d :: %s ===", step, path)
         hf = load_hf(path, dtype).to(args.device)
         model = jlens.from_hf(hf, tok)
-        lens = jlens.fit(model, corpus, dim_batch=args.dim_batch, max_seq_len=args.fit_max_seq)
+        fit_ckpt = str(fit_ckpt_dir / f"step{step}.pt") if args.fit_ckpt_every else None
+        lens = jlens.fit(model, corpus, dim_batch=args.dim_batch, max_seq_len=args.fit_max_seq,
+                         checkpoint_path=fit_ckpt,
+                         checkpoint_every=(args.fit_ckpt_every or None))
 
         conc = concordance(lens, model, probes, args.apply_position)
-        if base_jac is None:
+        if step == 0:
             base_jac = {L: lens.jacobians[L].detach().float().cpu() for L in lens.source_layers}
+            # fp32 so a resumed run's drift baseline matches a fresh run's exactly.
+            lens.save(str(base_lens_path), dtype=torch.float32)
             drift = {"layers": list(lens.source_layers),
                      "relfro_curve": [0.0] * len(lens.source_layers),
                      "cos_curve": [1.0] * len(lens.source_layers),
                      "relfro_mean": 0.0, "cos_mean": 1.0}
+        elif base_jac is None:
+            raise RuntimeError("base (t=0) lens missing; rerun with --fresh to rebuild it")
         else:
             drift = jac_drift(base_jac, lens)
 
@@ -251,6 +287,11 @@ def main():
                "d_model": model.d_model, "concordance": conc, "drift": drift}
         with metrics_path.open("a") as f:
             f.write(json.dumps(row) + "\n")
+            f.flush()
+            os.fsync(f.fileno())
+        # Row is durable, so the fit checkpoint for this step is no longer needed.
+        if fit_ckpt:
+            Path(fit_ckpt).unlink(missing_ok=True)
 
         if wb is not None:
             scalars = {"drift/relfro_mean": drift["relfro_mean"], "drift/cos_mean": drift["cos_mean"]}
@@ -269,6 +310,15 @@ def main():
 
         del hf, model, lens
         torch.cuda.empty_cache()
+
+    # Trajectory complete: drop the resume artifacts (fit checkpoints + base lens).
+    for p in fit_ckpt_dir.glob("step*.pt"):
+        p.unlink(missing_ok=True)
+    try:
+        fit_ckpt_dir.rmdir()
+    except OSError:
+        pass
+    base_lens_path.unlink(missing_ok=True)
 
     log.info("wrote %s", metrics_path)
     if wb is not None:

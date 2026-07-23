@@ -28,8 +28,8 @@ set -euo pipefail
 : "${SIZE:?SIZE must be set (270m|1b|4b|12b|27b)}"
 KIND=${KIND:-it}
 REPO_ROOT=/gpfs/data/oermannlab/users/zhouj14/gemma_med_ft
-FIT_CORPUS=${FIT_CORPUS:-${REPO_ROOT}/data/jlens/fit_corpus.txt}
-PROBE_SET=${PROBE_SET:-${REPO_ROOT}/data/jlens/probe_set.tsv}
+FIT_CORPUS=${FIT_CORPUS:-${REPO_ROOT}/data/jlens/fit_corpus_v2.txt}
+PROBE_SET=${PROBE_SET:-${REPO_ROOT}/data/jlens/probe_set_v2.tsv}
 OUT=${OUT:-${REPO_ROOT}/eval/jlens/${SIZE}_${KIND}}
 WANDB_PROJECT=${WANDB_PROJECT:-gemma-med-jlens}
 

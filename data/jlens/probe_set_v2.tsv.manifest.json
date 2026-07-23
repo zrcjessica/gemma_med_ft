@@ -1,0 +1,10 @@
+{
+  "n_total": 193,
+  "counts": {
+    "general": 50,
+    "medical": 50,
+    "multihop": 93
+  },
+  "general_medical": "hand-authored one-hop cloze, style-matched control pair",
+  "multihop_source": "jlens lens-eval-multihop.json"
+}
