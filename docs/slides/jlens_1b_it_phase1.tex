@@ -84,6 +84,54 @@
   \end{columns}
 \end{frame}
 
+\begin{frame}{The three metrics, defined}
+  Let $J_\ell$ be the fitted Jacobian at source layer $\ell$, $J_\ell^{0}$ its
+  $t{=}0$ (base) value, and at a probe position let $p$ be the model's next-token
+  distribution and $q_\ell$ the lens read-out transported from layer $\ell$.
+  \vspace{0.4em}
+  \begin{columns}[T]
+    \begin{column}{0.34\textwidth}
+      \textbf{\textcolor{aqua}{Drift}} \; \footnotesize(per layer, then mean)
+      \[
+        r_\ell=\frac{\lVert J_\ell-J_\ell^{0}\rVert_F}{\lVert J_\ell^{0}\rVert_F},
+        \quad
+        c_\ell=\frac{\langle J_\ell, J_\ell^{0}\rangle}
+                    {\lVert J_\ell\rVert\,\lVert J_\ell^{0}\rVert}
+      \]
+      \footnotesize\color{muted}
+      How far the lens has moved from the base. $r$ rises from 0,
+      $c$ falls from 1.
+    \end{column}
+    \begin{column}{0.34\textwidth}
+      \textbf{\textcolor{genblue}{Faithfulness KL}}
+      \[
+        \mathrm{KL}(p\,\|\,q_\ell)=\sum_v p_v\log\frac{p_v}{q_{\ell,v}}
+      \]
+      \footnotesize\color{muted}
+      Divergence between what the model says and what the lens reads out at
+      layer $\ell$. Lower $=$ more faithful; sensitive at small probe sets.
+    \end{column}
+    \begin{column}{0.30\textwidth}
+      \textbf{\textcolor{medorange}{Top-1 agreement}}
+      \[
+        a_\ell=\mathbf{1}\!\left[\hat\imath_\ell=\hat\imath\right]
+      \]
+      \footnotesize\color{muted}
+      $\hat\imath_\ell=\arg\max q_\ell$, $\hat\imath=\arg\max p$: does the
+      lens's top token match the model's? Coarser than KL, so noisier.
+    \end{column}
+  \end{columns}
+  \vspace{0.8em}
+  \hrule height 0.4pt
+  \vspace{0.5em}
+  {\small
+   \textbf{What the plots show.} Drift panels: $\overline{r},\overline{c}$ meaned
+   over all source layers. KL / top-1 panels: $\overline{\mathrm{KL}}$ and
+   $\overline{a}$ over the \emph{final} $\lceil n_{\text{layers}}/5\rceil$ layers
+   (where the read-out has resolved), averaged over the probe prompts and split
+   by \gen\ / \med\ arm. All read at the last token position.}
+\end{frame}
+
 \begin{frame}{The trajectory at a glance}
   \begin{center}
     \includegraphics[width=0.98\textwidth]{\figpath{fig_overview.png}}
