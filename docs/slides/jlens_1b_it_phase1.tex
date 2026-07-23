@@ -1,0 +1,186 @@
+\documentclass[aspectratio=169,11pt]{beamer}
+
+% Self-contained: no external fonts, so tectonic/pdflatex compile without network fonts.
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage{amsmath}
+\usepackage{booktabs}
+\usepackage{graphicx}
+
+\usefonttheme{professionalfonts}
+\setbeamertemplate{navigation symbols}{}
+\setbeamertemplate{itemize items}[circle]
+
+% palette (dataviz reference slots)
+\definecolor{ink}{HTML}{0B0B0B}
+\definecolor{muted}{HTML}{52514E}
+\definecolor{genblue}{HTML}{2A78D6}
+\definecolor{medorange}{HTML}{EB6834}
+\definecolor{aqua}{HTML}{1BAF7A}
+
+\setbeamercolor{frametitle}{fg=ink}
+\setbeamercolor{title}{fg=ink}
+\setbeamercolor{structure}{fg=genblue}
+\setbeamercolor{normal text}{fg=ink}
+\setbeamerfont{frametitle}{series=\bfseries}
+\setbeamertemplate{frametitle}{%
+  \vspace{0.6em}\hspace{0.2em}\insertframetitle\par
+  {\color{genblue}\rule{\textwidth}{1.2pt}}\vspace{-0.2em}}
+
+\newcommand{\gen}{\textcolor{genblue}{\textbf{general}}}
+\newcommand{\med}{\textcolor{medorange}{\textbf{medical}}}
+\newcommand{\figpath}[1]{../../figs/1b_it_full_v2/#1}
+
+\title{\bfseries The Jacobian lens across medical fine-tuning}
+\subtitle{Phase 1 --- first real trajectory: Gemma-3-1b-it}
+\author{gemma\_med\_ft}
+\date{2026-07-23}
+
+\begin{document}
+
+{\setbeamertemplate{frametitle}{}
+\begin{frame}
+  \vspace{1.2em}
+  {\color{genblue}\rule{\textwidth}{2pt}}\\[0.8em]
+  {\LARGE\bfseries The Jacobian lens across medical fine-tuning}\\[0.5em]
+  {\large Phase 1 --- first real trajectory: Gemma-3-1b-it}\\[1.2em]
+  {\color{muted}\small A training-dynamics / interpretability study.
+   We re-fit the average input$\rightarrow$output Jacobian lens ($J_\ell$) at every
+   checkpoint and track how the internal read-out and its faithfulness to the
+   model's own output evolve as medical SFT proceeds.}\\[1em]
+  {\color{muted}\footnotesize base $+$ 14 log-spaced checkpoints \; $\cdot$ \;
+   fit on 1000$\times$128 wikitext (110{,}741 source positions) \; $\cdot$ \;
+   2026-07-23}
+\end{frame}}
+
+\begin{frame}{What was measured}
+  \begin{columns}[T]
+    \begin{column}{0.52\textwidth}
+      \textbf{Model / run}
+      \begin{itemize}\setlength\itemsep{0.3em}
+        \item Gemma-3-1b-it, full fine-tune on \texttt{mix\_default}
+        \item lr $1\!\times\!10^{-5}$, 2 epochs, seed 42, 4882 steps
+        \item 26 layers, $d_{\text{model}}{=}1152$
+        \item log-spaced checkpoints $\{1,2,4,\dots,4096,4882\}$;
+              $t{=}0$ is the untouched base
+      \end{itemize}
+      \vspace{0.6em}
+      \textbf{Per checkpoint (re-fit $J_\ell$ each time)}
+      \begin{itemize}\setlength\itemsep{0.3em}
+        \item \textbf{Drift} of $J_\ell$ vs the $t{=}0$ lens
+        \item \textbf{Faithfulness}: KL$(\text{model}\,\|\,\text{lens})$
+              and top-1 agreement, per source layer
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.46\textwidth}
+      \small\color{muted}
+      The lens is a function of the weights, so it is re-fit on a
+      \emph{frozen} generic corpus at every checkpoint.\\[0.6em]
+      Faithfulness is read on a \emph{frozen} probe set split into a
+      \gen\ control and a \med\ arm --- the study watches medical
+      concordance move \emph{relative to} the general control.\\[0.6em]
+      Compute: $\sim$9.6\,h train $+$ 14\,h probe on 1$\times$A100.
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{The trajectory at a glance}
+  \begin{center}
+    \includegraphics[width=0.98\textwidth]{\figpath{fig_overview.png}}
+  \end{center}
+  \vspace{-0.4em}
+  {\small\color{muted}
+   Drift ramps then plateaus; \med\ KL sits above the \gen\ control throughout;
+   top-1 agreement is noise-dominated.}
+\end{frame}
+
+\begin{frame}{Drift: fast reorganization, then plateau}
+  \begin{columns}[c]
+    \begin{column}{0.62\textwidth}
+      \includegraphics[width=\textwidth]{\figpath{fig_drift.pdf}}
+    \end{column}
+    \begin{column}{0.36\textwidth}
+      \small
+      $J_\ell$ barely moves for the first $\sim$8 steps, reorganizes sharply
+      over steps 16--64, and \textbf{plateaus at rel.\ Frobenius $\approx0.30$}
+      (cosine $\approx0.95$) for the remaining $\sim$4800 steps.
+      \\[0.6em]
+      The representation's input$\rightarrow$output coupling settles early;
+      later training is behavioral refinement, not further lens movement.
+      \\[0.6em]
+      \textcolor{medorange}{\textbf{Caveat:}} \texttt{checkpoint-1} is
+      bit-identical to $t{=}0$ (drift exactly 0) --- saved before the first
+      optimizer step landed. A wasted probe point; fix the schedule.
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Faithfulness: medical trails the control by $\sim$1 nat}
+  \begin{columns}[c]
+    \begin{column}{0.62\textwidth}
+      \includegraphics[width=\textwidth]{\figpath{fig_kl.pdf}}
+    \end{column}
+    \begin{column}{0.36\textwidth}
+      \small
+      \med\ KL is \textbf{consistently $\sim$1 nat above} the \gen\ control ---
+      the lens is less faithful on medical content, in the expected direction.
+      \\[0.6em]
+      Both arms bump to a \textbf{mid-training peak near step 64}
+      (\gen\ 3.40, \med\ 5.17) and settle back near baseline by the end
+      (\gen\ 3.18, \med\ 4.01).
+      \\[0.6em]
+      KL is roughly flat-with-an-excursion over the full fine-tune --- not the
+      monotone fall seen in the 270m Phase-0 toy run (different model, different
+      mix; not expected to match).
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Top-1 agreement is noise-dominated}
+  \begin{columns}[c]
+    \begin{column}{0.62\textwidth}
+      \includegraphics[width=\textwidth]{\figpath{fig_top1.pdf}}
+    \end{column}
+    \begin{column}{0.36\textwidth}
+      \small
+      Top-1 agreement wanders 0.52--0.75 with the two arms crossing repeatedly
+      and \textbf{no trend} --- at \textbf{15 prompts/arm} the differential
+      signal ($\sim$1 nat in KL) is buried.
+      \\[0.6em]
+      This is empirical support for the standing decision:
+      \textbf{KL is the workhorse metric}; top-1 is reported but not leaned on.
+      \\[0.6em]
+      Action: enlarge the probe set (medical + general cloze arms) and add
+      jlens's 93-prompt \texttt{multihop} as a curated reference arm.
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Findings \& next steps}
+  \textbf{Findings}
+  \begin{itemize}\setlength\itemsep{0.25em}
+    \item $J_\ell$ reorganizes in the first $\sim$64 steps, then plateaus ---
+          the strongest, cleanest signal in the run.
+    \item The lens is measurably less faithful on \med\ than \gen\ content
+          ($\sim$1 nat KL), stable across the trajectory.
+    \item KL is smooth and readable; top-1 is noise-limited at the current
+          probe-set size.
+  \end{itemize}
+  \vspace{0.4em}
+  \textbf{Fix before scaling}
+  \begin{itemize}\setlength\itemsep{0.25em}
+    \item \texttt{checkpoint-1} $\equiv$ base --- drop or shift the first
+          log-schedule point.
+    \item Non-resumable fit: 12b/27b need a per-step checkpoint path before a
+          long fit can survive a requeue.
+  \end{itemize}
+  \vspace{0.4em}
+  \textbf{Next}
+  \begin{itemize}\setlength\itemsep{0.25em}
+    \item Expand + re-freeze the probe set; re-probe.
+    \item Pair with the behavioral trajectory (MedQA / MedMCQA / PubMedQA).
+    \item Second real trajectory: 1b-\emph{pt} (the pt-vs-it starting-point axis).
+  \end{itemize}
+\end{frame}
+
+\end{document}
