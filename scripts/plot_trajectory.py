@@ -191,11 +191,11 @@ def main():
     plot_drift(rows, steps, x, out / "fig_drift.pdf")
     plot_conc(rows, steps, x, "kl_final",
               "KL(model ‖ lens)  (nats, final layers)",
-              "Faithfulness: medical lens trails the general control by ~1 nat",
+              "Faithfulness: the medical–general gap narrows over medical SFT",
               out / "fig_kl.pdf")
     plot_conc(rows, steps, x, "top1_final",
               "top-1 agreement (final layers)",
-              "Top-1 agreement is noise-dominated at 15 prompts / arm",
+              "Top-1 agreement: medical rises toward the general control",
               out / "fig_top1.pdf")
     plot_overview(rows, steps, x, out / "fig_overview.png")
     plot_base_vs_final(rows, out / "fig_base_vs_final.pdf")

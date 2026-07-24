@@ -29,7 +29,8 @@
 
 \newcommand{\gen}{\textcolor{genblue}{\textbf{general}}}
 \newcommand{\med}{\textcolor{medorange}{\textbf{medical}}}
-\newcommand{\figpath}[1]{../../figs/1b_it_full_v2/#1}
+\newcommand{\figpath}[1]{../../figs/1b_it_full_v3/#1}
+\newcommand{\mh}{\textcolor{aqua}{\textbf{multihop}}}
 
 \title{\bfseries The Jacobian lens across medical fine-tuning}
 \subtitle{Phase 1 --- first real trajectory: Gemma-3-1b-it}
@@ -50,7 +51,7 @@
    model's own output evolve as medical SFT proceeds.}\\[1em]
   {\color{muted}\footnotesize base $+$ 14 log-spaced checkpoints \; $\cdot$ \;
    fit on 1000$\times$128 wikitext (110{,}741 source positions) \; $\cdot$ \;
-   2026-07-23}
+   193-prompt probe set (50 general / 50 medical / 93 multihop) \; $\cdot$ \; 2026-07-24}
 \end{frame}}
 
 \begin{frame}{What was measured}
@@ -76,9 +77,10 @@
       \small\color{muted}
       The lens is a function of the weights, so it is re-fit on a
       \emph{frozen} generic corpus at every checkpoint.\\[0.6em]
-      Faithfulness is read on a \emph{frozen} probe set split into a
-      \gen\ control and a \med\ arm --- the study watches medical
-      concordance move \emph{relative to} the general control.\\[0.6em]
+      Faithfulness is read on a \emph{frozen} 193-prompt set: a \gen\ control,
+      a \med\ arm (50 each, hand-authored cloze), and jlens's own \mh\ set (93,
+      a curated reference). The study watches medical concordance move
+      \emph{relative to} the general control.\\[0.6em]
       Compute: $\sim$9.6\,h train $+$ 14\,h probe on 1$\times$A100.
     \end{column}
   \end{columns}
@@ -138,8 +140,9 @@
   \end{center}
   \vspace{-0.4em}
   {\small\color{muted}
-   Drift ramps then plateaus; \med\ KL sits above the \gen\ control throughout;
-   top-1 agreement is noise-dominated.}
+   Drift ramps then plateaus; the \med--\gen\ KL gap \emph{narrows} over training
+   (\med\ improves, \gen\ degrades); \med\ top-1 rises toward the control. Dashed
+   lines mark the $t{=}0$ base.}
 \end{frame}
 
 \begin{frame}{Drift: fast reorganization, then plateau}
@@ -157,54 +160,57 @@
       later training is behavioral refinement, not further lens movement.
       \\[0.6em]
       \textcolor{medorange}{\textbf{Caveat:}} \texttt{checkpoint-1} is
-      bit-identical to $t{=}0$ (drift exactly 0) --- saved before the first
-      optimizer step landed. A wasted probe point; fix the schedule.
+      bit-identical to $t{=}0$ (drift exactly 0, verified $\max|\Delta|{=}0$) ---
+      the warmup schedule applies lr${=}0$ on step 1. Now dropped for future
+      runs; still present here since this trajectory predates the fix.
     \end{column}
   \end{columns}
 \end{frame}
 
-\begin{frame}{Faithfulness: medical trails the control by $\sim$1 nat}
+\begin{frame}{Faithfulness: the medical--general gap narrows}
   \begin{columns}[c]
     \begin{column}{0.62\textwidth}
       \includegraphics[width=\textwidth]{\figpath{fig_kl.pdf}}
     \end{column}
     \begin{column}{0.36\textwidth}
       \small
-      \med\ KL is \textbf{consistently $\sim$1 nat above} the \gen\ control ---
-      the lens is less faithful on medical content, in the expected direction.
-      \\[0.6em]
-      Both arms bump to a \textbf{mid-training peak near step 64}
-      (\gen\ 3.40, \med\ 5.17) and settle back near baseline by the end
-      (\gen\ 3.18, \med\ 4.01).
-      \\[0.6em]
-      KL is roughly flat-with-an-excursion over the full fine-tune --- not the
-      monotone fall seen in the 270m Phase-0 toy run (different model, different
-      mix; not expected to match).
+      At $t{=}0$ the lens is far less faithful on medical (\med\ KL 4.68 vs
+      \gen\ 2.68 --- a \textbf{2.0-nat gap}). Over medical SFT that gap
+      \textbf{halves to $\sim$1.1 nat}, from \emph{both} sides:
+      \\[0.4em]
+      \gen\ KL \textbf{degrades} $2.68\!\to\!3.23$ ($+0.54$); \med\ KL
+      \textbf{improves} $4.68\!\to\!4.31$ ($-0.37$). A domain-specific effect ---
+      exactly the differential the control is there to isolate.
+      \\[0.4em]
+      {\color{muted}Clean at 50/arm where it was buried at 15. Absolute KL is not
+      comparable to earlier smaller-set runs (different prompts); per-prompt CIs
+      not yet computed.}
     \end{column}
   \end{columns}
 \end{frame}
 
-\begin{frame}{Top-1 agreement is noise-dominated}
+\begin{frame}{Top-1 agreement corroborates the KL story}
   \begin{columns}[c]
     \begin{column}{0.62\textwidth}
       \includegraphics[width=\textwidth]{\figpath{fig_top1.pdf}}
     \end{column}
     \begin{column}{0.36\textwidth}
       \small
-      Top-1 agreement wanders 0.52--0.75 with the two arms crossing repeatedly
-      and \textbf{no trend} --- at \textbf{15 prompts/arm} the differential
-      signal ($\sim$1 nat in KL) is buried.
+      At 50/arm the coarser metric now agrees with KL: \med\ top-1 \textbf{rises
+      $0.45\!\to\!0.57$} toward the \gen\ control (flat $\approx0.70$). The
+      lens's top token matches the model's more often on medical after SFT.
       \\[0.6em]
-      This is empirical support for the standing decision:
-      \textbf{KL is the workhorse metric}; top-1 is reported but not leaned on.
+      Still coarser and noisier than KL --- \textbf{KL remains the workhorse} ---
+      but expanding the probe set from 15 to 50/arm pulled a real trend out of
+      what was pure noise before.
       \\[0.6em]
-      Action: enlarge the probe set (medical + general cloze arms) and add
-      jlens's 93-prompt \texttt{multihop} as a curated reference arm.
+      {\color{muted}\mh\ (reference arm) stays flat $\approx0.5$ --- the effect is
+      medical-specific, not a global shift.}
     \end{column}
   \end{columns}
 \end{frame}
 
-\begin{frame}{Vs.\ the untuned baseline: net change is small}
+\begin{frame}{Vs.\ the untuned baseline: a directional, domain-specific change}
   \begin{columns}[c]
     \begin{column}{0.62\textwidth}
       \includegraphics[width=\textwidth]{\figpath{fig_base_vs_final.pdf}}
@@ -212,15 +218,16 @@
     \begin{column}{0.36\textwidth}
       \small
       Endpoint summary --- base ($t{=}0$) vs.\ the final checkpoint, the change
-      medical SFT actually produced. (The trajectory panels read \emph{every}
-      checkpoint against this dashed baseline.)
+      medical SFT actually produced. (Every trajectory point is read against this
+      dashed baseline.)
       \\[0.5em]
-      Faithfulness barely moves: \gen\ KL \textbf{$3.05\!\to\!3.18$} ($+0.13$),
-      \med\ KL \textbf{$4.03\!\to\!4.01$} ($-0.01$). The $\sim$1-nat \med--\gen\
-      gap is \emph{inherited} from the base, not opened by fine-tuning.
+      The two arms move in \textbf{opposite} directions: \med\ KL $-0.37$ and
+      \med\ top-1 $+0.12$ (more faithful on medical), while \gen\ KL $+0.54$ and
+      top-1 $\approx$flat (the control drifts the other way).
       \\[0.5em]
-      The real motion is in the \textbf{Jacobian} (drift $0\!\to\!0.28$), not in
-      lens$\leftrightarrow$model concordance.
+      Not a global shift in concordance --- a \textbf{medical-specific}
+      realignment of the lens, on top of the large \textbf{Jacobian} drift
+      ($0\!\to\!0.28$).
     \end{column}
   \end{columns}
 \end{frame}
@@ -229,25 +236,23 @@
   \textbf{Findings}
   \begin{itemize}\setlength\itemsep{0.15em}
     \item $J_\ell$ reorganizes in the first $\sim$64 steps, then plateaus ---
-          the strongest, cleanest signal in the run.
-    \item Vs.\ the base, endpoint faithfulness barely moves
-          ($|\Delta\mathrm{KL}|\le0.13$ nat); the $\sim$1-nat \med--\gen\ gap is
-          \emph{inherited} from $t{=}0$, not opened by fine-tuning.
-    \item KL is smooth and readable; top-1 is noise-limited at the current
-          probe-set size.
+          the largest single effect (drift $0\!\to\!0.28$).
+    \item Medical SFT produces a \textbf{domain-specific faithfulness change}:
+          the \med--\gen\ KL gap halves (\med\ $-0.37$, \gen\ $+0.54$) with \med\
+          top-1 $+0.12$, while the \mh\ reference stays flat.
+    \item Expanding 15$\to$50/arm turned that from noise into a clean,
+          KL$+$top-1 trend.
   \end{itemize}
-  \vspace{0.3em}
-  \textbf{Fix before scaling}
+  \vspace{0.2em}
+  \textbf{Done since the first pass}
   \begin{itemize}\setlength\itemsep{0.15em}
-    \item \texttt{checkpoint-1} $\equiv$ base --- drop or shift the first
-          log-schedule point.
-    \item Non-resumable fit: 12b/27b need a per-step checkpoint path before a
-          long fit can survive a requeue.
+    \item Probe set expanded to 193 (frozen); probe made \textbf{resumable}
+          (GPU-verified); \texttt{checkpoint-1}$\equiv$base fixed for future runs.
   \end{itemize}
-  \vspace{0.3em}
+  \vspace{0.2em}
   \textbf{Next}
   \begin{itemize}\setlength\itemsep{0.15em}
-    \item Expand + re-freeze the probe set; re-probe.
+    \item Per-prompt CIs on the gap (is the narrowing significant, not just clean?).
     \item Pair with the behavioral trajectory (MedQA / MedMCQA / PubMedQA).
     \item Second real trajectory: 1b-\emph{pt} (the pt-vs-it starting-point axis).
   \end{itemize}
