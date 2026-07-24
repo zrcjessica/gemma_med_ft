@@ -1,0 +1,24 @@
+{
+  "model": "/gpfs/data/oermannlab/users/zhouj14/hf/hub/models--google--gemma-3-1b-it/snapshots/dcc83ea841ab6100d6b47a070329e1ba4cf78752/",
+  "label": "gemma-3-1b-it-baseline",
+  "results": {
+    "medqa": {
+      "accuracy": 31.89,
+      "n": 1273,
+      "unparsed": 1,
+      "unparsed_pct": 0.08
+    },
+    "medmcqa": {
+      "accuracy": 32.51,
+      "n": 4183,
+      "unparsed": 8,
+      "unparsed_pct": 0.19
+    },
+    "pubmedqa": {
+      "accuracy": 52.6,
+      "n": 500,
+      "unparsed": 0,
+      "unparsed_pct": 0.0
+    }
+  }
+}

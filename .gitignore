@@ -8,3 +8,4 @@ checkpoints/
 slurm/logs/
 wandb/
 .env
+eval/**/*_predictions.jsonl

@@ -1,0 +1,24 @@
+{
+  "model": "/gpfs/data/oermannlab/users/zhouj14/gemma_med_ft/outputs/1b/full_lr1e-5_25716223/checkpoint-128",
+  "label": "1b_it_full_v3-step128",
+  "results": {
+    "medqa": {
+      "accuracy": 21.68,
+      "n": 1273,
+      "unparsed": 333,
+      "unparsed_pct": 26.16
+    },
+    "medmcqa": {
+      "accuracy": 26.75,
+      "n": 4183,
+      "unparsed": 836,
+      "unparsed_pct": 19.99
+    },
+    "pubmedqa": {
+      "accuracy": 55.4,
+      "n": 500,
+      "unparsed": 37,
+      "unparsed_pct": 7.4
+    }
+  }
+}
