@@ -14,7 +14,7 @@
 #   sbatch --gres=gpu:a100:8 --export=ALL,SIZE=27b,LORA=1 scripts/train_med.sbatch
 #
 # Env vars:
-#   SIZE      1b | 4b | 12b | 27b            (required)
+#   SIZE      270m | 1b | 4b | 12b | 27b     (required)
 #   LR        learning rate                   (default 1e-5)
 #   LORA      1 to use LoRA instead of full FT (default: on for 12b/27b)
 #   DATA_DIR  prebuilt mixture                (default: data/mix_default)
@@ -23,7 +23,7 @@
 
 set -euo pipefail
 
-: "${SIZE:?SIZE must be set (1b|4b|12b|27b)}"
+: "${SIZE:?SIZE must be set (270m|1b|4b|12b|27b)}"
 LR=${LR:-1e-5}
 EPOCHS=${EPOCHS:-2}
 MAX_SEQ_LEN=${MAX_SEQ_LEN:-2048}
@@ -37,8 +37,12 @@ fi
 VARIANT=${VARIANT:-$([[ "${LORA}" == "1" ]] && echo lora || echo full)}
 
 # Per-GPU batch size shrinks with model size; grad accum holds the effective
-# batch near 128 sequences.
+# batch near 128 sequences. The defaults assume the GPU count each size is
+# normally submitted with (270m: 1, 1b/4b: 4) -- the trajectory arms are only
+# comparable if every one of them lands on the same effective batch, and so the
+# same step clock (312335 train seqs / 128 = 2441 steps/epoch).
 case "${SIZE}" in
+    270m) PER_DEV_BS=${PER_DEV_BS:-4}; GRAD_ACC=${GRAD_ACC:-32} ;;
     1b)  PER_DEV_BS=${PER_DEV_BS:-8}; GRAD_ACC=${GRAD_ACC:-8} ;;
     4b)  PER_DEV_BS=${PER_DEV_BS:-4}; GRAD_ACC=${GRAD_ACC:-8} ;;
     12b) PER_DEV_BS=${PER_DEV_BS:-2}; GRAD_ACC=${GRAD_ACC:-8} ;;
