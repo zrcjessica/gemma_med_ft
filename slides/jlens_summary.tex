@@ -1,0 +1,353 @@
+% Jacobian-lens trajectory summary: gemma-3-270m-it and gemma-3-1b-it
+% Build:  tectonic slides/jlens_summary.tex
+\documentclass[aspectratio=169,10pt]{beamer}
+
+\usetheme{default}
+\usecolortheme{dove}
+\setbeamertemplate{navigation symbols}{}
+\setbeamertemplate{footline}[frame number]
+\setbeamercolor{frametitle}{fg=black}
+\setbeamerfont{frametitle}{series=\bfseries}
+\setbeamerfont{title}{series=\bfseries}
+\setbeamertemplate{itemize items}[circle]
+
+\usepackage{booktabs}
+\usepackage{graphicx}
+\usepackage{xcolor}
+\usepackage[T1]{fontenc}
+
+\graphicspath{{../figs/}{figs/}}
+
+\definecolor{up}{RGB}{20,110,60}
+\definecolor{down}{RGB}{170,40,40}
+\newcommand{\good}[1]{\textcolor{up}{#1}}
+\newcommand{\bad}[1]{\textcolor{down}{#1}}
+
+\title{Jacobian-lens trajectories under medical SFT}
+\subtitle{\texttt{gemma-3-270m-it} and \texttt{gemma-3-1b-it}}
+\author{}
+\date{\today}
+
+\begin{document}
+
+\begin{frame}
+  \titlepage
+  \vspace{-2em}
+  \centering\small
+  Full fine-tune on \texttt{mix\_default}, lr $1\mathrm{e}{-5}$, log-spaced
+  checkpoints to step 4882
+\end{frame}
+
+% ---------------------------------------------------------------- setup
+\begin{frame}{Setup}
+  \begin{itemize}
+    \item \textbf{Two arms}, identical seed and data order:
+      \texttt{gemma-3-270m-it} and \texttt{gemma-3-1b-it}, full FT,
+      lr $1\mathrm{e}{-5}$, completion-only loss.
+    \item \textbf{Log-spaced checkpoints} $\{1,2,4,\dots,4096\}$ + final (4882).
+      $t=0$ is the untouched base, prepended by the probe.
+    \item \textbf{Lens refit per checkpoint} on a frozen 1000-sequence generic
+      (non-medical) WikiText corpus, taken from \texttt{jlens}'s own
+      \texttt{load\_wikitext\_prompts} --- the lens is a function of the weights.
+    \item \textbf{Concordance} on the frozen 193-prompt probe set:
+      50 \texttt{general} + 50 \texttt{medical} (hand-authored one-hop cloze,
+      style-matched control pairs) + 93 \texttt{multihop} from
+      \texttt{jlens}'s \texttt{lens-eval-multihop.json}.
+    \item \textbf{Behavioral} trajectory in parallel: MedQA, MedMCQA, PubMedQA,
+      reported as \emph{parsed} accuracy with parse rate alongside.
+  \end{itemize}
+  \vfill
+  {\footnotesize All lens numbers below are \textbf{final-layer} read-outs.
+  Coverage: 14 points (270m), 15 points (1b) --- both complete.}
+\end{frame}
+
+% ---------------------------------------------------------------- probe step
+\begin{frame}{The probe step in detail}
+  \small
+  Runs in \texttt{.venv-jlens} (\texttt{transformers} 5.14.1 + \texttt{jlens}
+  @ \texttt{581d398}) --- a second env, because the training pin 4.53.2 is
+  hard-incompatible. Imports nothing from \texttt{gemma\_med}.
+
+  \vspace{0.15em}
+  \begin{columns}[T]
+    \begin{column}{0.55\textwidth}
+      \textbf{Per checkpoint} (base prepended as step 0, then
+      \texttt{checkpoint-*}):
+      \begin{enumerate}\setlength{\itemsep}{0em}
+        \item \textbf{Load} $\rightarrow$ \texttt{jlens.from\_hf(hf, tok)}.
+          Forced text-only \texttt{Gemma3ForCausalLM}; any loader leaving a
+          weight missing is \emph{rejected}, not accepted.
+        \item \textbf{Fit} a fresh lens: \texttt{jlens.fit(model, corpus,}
+          \texttt{dim\_batch=16, max\_seq\_len=128)} on the frozen 1000-seq
+          WikiText corpus. \emph{Dominates runtime.}
+        \item \textbf{Concordance}: for each of the 193 probes,
+          \texttt{lens.apply(model, prompt,} \texttt{positions=[-1])}
+          $\rightarrow$ per source layer, top-1 agreement and
+          $\mathrm{KL}(\text{model}\,\|\,\text{lens})$ at the last token.
+        \item \textbf{Drift} vs.\ $t{=}0$, per layer: relative Frobenius
+          $\|J_l - J_l^{0}\| / \|J_l^{0}\|$ and cosine.
+      \end{enumerate}
+    \end{column}
+    \begin{column}{0.43\textwidth}
+      \textbf{Invariants that make the trajectory comparable}
+      \begin{itemize}\setlength{\itemsep}{0em}
+        \item \textbf{One load path for all points.} Letting \texttt{Auto*}
+          pick per-path would read $t{=}0$ through the multimodal wrapper and
+          later points through the text model --- two forwards on one
+          trajectory, silently corrupting drift.
+        \item \textbf{Lens refit every time.} $J$ is a function of the weights.
+        \item \textbf{Corpus and probe set frozen} across all checkpoints and
+          sizes.
+        \item \textbf{$t{=}0$ lens cached in fp32}, so a resumed run's drift
+          baseline matches a fresh run's exactly.
+      \end{itemize}
+    \end{column}
+  \end{columns}
+
+  \vspace{0.1em}
+  {\scriptsize \textbf{Output.} One \texttt{fsync}'d JSON row per checkpoint in
+  \texttt{metrics.jsonl}, plus W\&B scalars keyed by training step. Resumable:
+  completed steps are skipped and the fit checkpoints every 50 prompts, so a
+  requeue does not wipe the trajectory.}
+\end{frame}
+
+% ---------------------------------------------------------------- headline
+\begin{frame}{Four findings}
+  \begin{enumerate}
+    \item \textbf{Drift has a sharp onset, then saturates.} The Jacobian
+      finishes moving in the first ${\sim}100$ steps; the remaining 97\% of
+      training adds nothing.
+    \item \textbf{Faithfulness moves in \emph{opposite} directions at the two
+      scales.} 270m gets \emph{less} legible on medical cues; 1b gets more.
+    \item \textbf{Behavior confirms the split.} 1b gains $+5$--$7$ pp parsed
+      accuracy; 270m gains nothing and only churns format.
+    \item \textbf{Drift leads format collapse, both lead accuracy.} The lens
+      finishes moving before the model has learned any medicine.
+  \end{enumerate}
+\end{frame}
+
+% ---------------------------------------------------------------- drift
+\begin{frame}{1. Drift onsets sharply, then saturates}
+  \centering
+  \begin{tabular}{lccc}
+    \toprule
+    & onset & plateau & final relfro / cos \\
+    \midrule
+    \texttt{270m-it} & steps 32--64 & ${\sim}$step 128 & 0.349 / 0.937 \\
+    \texttt{1b-it}   & steps 8--32  & ${\sim}$step 64  & 0.398 / 0.919 \\
+    \bottomrule
+  \end{tabular}
+
+  \vspace{1.2em}
+  \begin{itemize}
+    \item Nothing moves for the first ${\sim}8$--16 steps
+      (rel.\ Frobenius $< 0.02$).
+    \item Then the Jacobian swings hard over roughly \emph{one decade} of
+      steps, and flatlines.
+    \item 1b: $0.391$ at step 64 $\rightarrow$ $0.398$ at step 4882.
+      The last 4000 steps buy \textbf{zero} additional lens movement.
+  \end{itemize}
+  \vfill
+  {\footnotesize Most robust result --- holds at both sizes.}
+\end{frame}
+
+\begin{frame}{1. Drift --- \texttt{1b-it}}
+  \centering
+  \includegraphics[height=0.78\textheight]{1b_it_full_v3/fig_drift.pdf}
+\end{frame}
+
+% ---------------------------------------------------------------- faithfulness
+\begin{frame}{2. Faithfulness inverts between the two scales}
+  Lens$\leftrightarrow$model KL at the final layer --- \emph{lower = lens
+  predicts the model better}.
+
+  \vspace{0.8em}
+  \centering
+  \begin{tabular}{lccc}
+    \toprule
+    & KL general $0\!\rightarrow\!$final & KL medical $0\!\rightarrow\!$final
+    & top-1 medical $0\!\rightarrow\!$final \\
+    \midrule
+    \texttt{270m-it} & $1.482 \rightarrow 1.531$ \; (\bad{$+0.05$})
+                     & $1.861 \rightarrow 2.137$ \; (\bad{$+0.28$})
+                     & $0.44 \rightarrow$ \bad{$0.38$} \\
+    \texttt{1b-it}   & $0.481 \rightarrow 0.548$ \; (\bad{$+0.07$})
+                     & $0.591 \rightarrow 0.571$ \; (\good{$-0.02$})
+                     & $0.72 \rightarrow$ \good{$0.80$} \\
+    \bottomrule
+  \end{tabular}
+
+  \vspace{1.2em}
+  \begin{itemize}
+    \item \textbf{270m:} medical KL rises 15\% and medical top-1 agreement
+      \emph{drops}, while the general control barely moves. Lens and model
+      diverge exactly on the trained domain.
+    \item \textbf{1b:} the inverse --- medical improves, \emph{general}
+      regresses.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{2. What the 1b result actually is: the domain gap closing}
+  \begin{columns}[T]
+    \begin{column}{0.52\textwidth}
+      \begin{itemize}
+        \item At $t=0$ there is a clear medical-vs-general gap:
+          KL $0.591$ vs.\ $0.481$.
+        \item The two cues \textbf{cross around steps 128--256}.
+        \item By the end they are indistinguishable:
+          $0.571$ vs.\ $0.548$.
+      \end{itemize}
+      \vspace{0.6em}
+      So this is not ``medical becomes more faithful'' in isolation --- it is
+      the \textbf{gap collapsing}, medical up and general down.
+      \vspace{0.8em}
+
+      The held-out OOD cue is the cleaner read: \texttt{multihop} KL degrades
+      at \emph{both} sizes.
+      \begin{itemize}
+        \item 270m: $0.733 \rightarrow \mathbf{0.800}$
+        \item 1b: \phantom{0}$0.497 \rightarrow \mathbf{0.624}$
+      \end{itemize}
+      \vspace{0.4em}
+      \textbf{Generic-domain faithfulness is what medical SFT costs you.}
+    \end{column}
+    \begin{column}{0.46\textwidth}
+      \centering
+      \includegraphics[width=\linewidth]{1b_it_full_v3/fig_kl.pdf}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+% ---------------------------------------------------------------- behavior
+\begin{frame}{3. Behavior confirms the two scales differ}
+  Parsed accuracy (parse rate in parentheses):
+
+  \vspace{0.8em}
+  \centering
+  \begin{tabular}{lccc}
+    \toprule
+    & MedQA & MedMCQA & PubMedQA \\
+    \midrule
+    \texttt{270m-it} $t{=}0$   & 24.6 \; (69\%)  & 27.2 \; (13\%)  & 54.5 \; (7\%) \\
+    \texttt{270m-it} final     & 25.5 \; (49\%)  & 25.0 \; (49\%)  & 48.0 \; (5\%) \\
+    \midrule
+    \texttt{1b-it} $t{=}0$     & 31.9 \; (100\%) & 32.6 \; (100\%) & 52.6 \; (100\%) \\
+    \texttt{1b-it} final       & \good{\textbf{38.5}} \; (\bad{25\%})
+                               & \good{\textbf{37.8}} \; (\bad{75\%})
+                               & \good{\textbf{58.1}} \; (97\%) \\
+    \bottomrule
+  \end{tabular}
+
+  \vspace{1.2em}
+  \begin{itemize}
+    \item \textbf{270m learns nothing.} MedQA/MedMCQA sit near chance
+      throughout; every apparent movement is format churn (MedMCQA parse
+      13\%$\rightarrow$49\%; PubMedQA swings 5\%$\rightarrow$88\%$\rightarrow$5\%).
+    \item \textbf{1b gains $+6.6$ / $+5.2$ / $+5.5$ pp} parsed --- while format
+      compliance collapses, worst on MedQA ($100\% \rightarrow 25\%$).
+  \end{itemize}
+  \vfill
+  {\footnotesize Reported parsed, not raw: the raw MedQA number would show a
+  \emph{loss} purely from the parse-rate collapse.}
+\end{frame}
+
+\begin{frame}{3. Joined behavioral + lens trajectory --- \texttt{1b-it}}
+  \centering
+  \includegraphics[height=0.80\textheight]{1b_it_full_v3/fig_joined.pdf}
+\end{frame}
+
+\begin{frame}{3. Joined behavioral + lens trajectory --- \texttt{270m-it}}
+  \centering
+  \includegraphics[height=0.80\textheight]{270m_it_full/fig_joined.pdf}
+\end{frame}
+
+% ---------------------------------------------------------------- timing
+\begin{frame}{4. Timing: drift leads format collapse, both lead accuracy}
+  For \texttt{1b-it} the three curves are offset:
+
+  \vspace{0.8em}
+  \centering
+  \begin{tabular}{lll}
+    \toprule
+    Signal & Onset & Notes \\
+    \midrule
+    Jacobian drift      & steps 8--32   & plateaus by step 64 \\
+    Format compliance   & step 32       & MedQA parse $100 \rightarrow 93 \rightarrow 74\%$ by 128 \\
+    Task accuracy       & steps 2048+   & MedQA still ${\sim}30$ at step 512; 38 only at 4096--4882 \\
+    \bottomrule
+  \end{tabular}
+
+  \vspace{1.5em}
+  \begin{block}{Interpretation}
+    The Jacobian has \textbf{finished moving before the model has learned any
+    medicine}. Whatever the lens is tracking here is the format / style /
+    alignment shift --- not task competence.
+  \end{block}
+\end{frame}
+
+% ---------------------------------------------------------------- caveats
+\begin{frame}{Caveats}
+  \begin{itemize}
+    \item \textbf{Top-1 is coarse.} $n{=}50$ per cue, so top-1 agreement
+      quantizes at $0.02$ and single-checkpoint wiggles of $\pm 0.04$ are
+      noise. \emph{Trust the KL trends, not top-1.}
+    \item \textbf{Two sizes is not a scaling trend.} The 270m$\leftrightarrow$1b
+      inversion in medical faithfulness is the most interesting claim here and
+      rests on exactly one pair. It needs 4b to be more than a hypothesis.
+    \item \textbf{The \texttt{general}/\texttt{medical} cues are
+      hand-authored}, not sampled from a corpus --- the domain-gap result
+      inherits whatever bias is in those 100 prompts. \texttt{multihop} is the
+      one cue with an external, independently-constructed source.
+    \item \textbf{Coverage gaps.} \texttt{4b\_it\_validate\{,2\}} are 5-point
+      wrapper-validation spikes (base + steps 1--8), not trajectories.
+      No \texttt{-pt} arm exists at any size --- the pt-vs-it starting-point
+      axis is entirely unstarted.
+  \end{itemize}
+\end{frame}
+
+% ---------------------------------------------------------------- next
+\begin{frame}{Next}
+  \begin{enumerate}
+    \item \textbf{4b-it full trajectory} --- the decisive test of whether the
+      medical-faithfulness inversion is a scale effect or a 270m artifact.
+    \item \textbf{Widen the \texttt{general}/\texttt{medical} cues} beyond the
+      100 hand-authored prompts, to check the domain-gap collapse is not an
+      artifact of how those pairs were written.
+    \item \textbf{Open a \texttt{-pt} arm} at 1b: does a non-aligned starting
+      point show the same drift-before-competence ordering?
+    \item \textbf{Anchor against \texttt{medgemma-27b-text-it}} on the same
+      probe set to place the trajectory endpoints on an absolute scale.
+  \end{enumerate}
+\end{frame}
+
+\begin{frame}{Data provenance}
+  \small
+  \begin{tabular}{ll}
+    \toprule
+    Artifact & Path \\
+    \midrule
+    Lens metrics (270m) & \texttt{eval/jlens/270m\_it\_full/metrics.jsonl} (14 rows) \\
+    Lens metrics (1b)   & \texttt{eval/jlens/1b\_it\_full\_v3/metrics.jsonl} (15 rows) \\
+    Joined traj.\ (270m)& \texttt{eval/traj/270m\_it\_full/joined.json} \\
+    Joined traj.\ (1b)  & \texttt{eval/traj/1b\_it\_full\_v3/joined.json} \\
+    Fit corpus          & \texttt{data/jlens/fit\_corpus\_v2.txt} (1000 WikiText seq, frozen) \\
+    Probe set           & \texttt{data/jlens/probe\_set\_v2.tsv} (50/50/93, frozen) \\
+    Figures             & \texttt{figs/\{270m\_it\_full,1b\_it\_full\_v3\}/} \\
+    Probe jobs          & \texttt{25776556} (1b), \texttt{25799677} (270m) \\
+    \bottomrule
+  \end{tabular}
+
+  \vspace{1.2em}
+  {\footnotesize
+  Both runs logged \texttt{fit\_corpus=1000 probes=193} --- i.e.\ the current
+  frozen v2 inputs. The v1 files (\texttt{fit\_corpus.txt}, 40 seq;
+  \texttt{probe\_set.tsv}, 30 prompts) are legacy and still present in
+  \texttt{data/jlens/}; they were used only by the superseded runs.
+
+  \smallskip
+  Superseded: \texttt{1b\_it\_full\_v2} (v1 30-prompt set, no \texttt{multihop}),
+  \texttt{1b\_it\_full\_probev2} (v2 inputs, immediately re-run as v3),
+  \texttt{270m\_verify} (Phase-0 8-point smoke test, v1 inputs).}
+\end{frame}
+
+\end{document}
