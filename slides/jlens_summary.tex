@@ -117,8 +117,9 @@
     \item \textbf{Drift has a sharp onset, then saturates.} The Jacobian
       finishes moving in the first ${\sim}100$ steps; the remaining 97\% of
       training adds nothing.
-    \item \textbf{Faithfulness moves in \emph{opposite} directions at the two
-      scales.} 270m gets \emph{less} legible on medical cues; 1b gets more.
+    \item \textbf{Medical faithfulness improves at 1b, is flat at 270m ---
+      and generic faithfulness degrades at both.} The cost of medical SFT is
+      paid on the out-of-domain cues.
     \item \textbf{Behavior confirms the split.} 1b gains $+5$--$7$ pp parsed
       accuracy; 270m gains nothing and only churns format.
     \item \textbf{Drift leads format collapse, both lead accuracy.} The lens
@@ -131,24 +132,25 @@
   \centering
   \begin{tabular}{lccc}
     \toprule
-    & onset & plateau & final relfro / cos \\
+    & onset & plateau & final relfro / cos (layer mean) \\
     \midrule
-    \texttt{270m-it} & steps 32--64 & ${\sim}$step 128 & 0.349 / 0.937 \\
-    \texttt{1b-it}   & steps 8--32  & ${\sim}$step 64  & 0.398 / 0.919 \\
+    \texttt{270m-it} & steps 32--64 & ${\sim}$step 128 & 0.249 / 0.976 \\
+    \texttt{1b-it}   & steps 8--32  & ${\sim}$step 64  & 0.279 / 0.956 \\
     \bottomrule
   \end{tabular}
 
   \vspace{1.2em}
   \begin{itemize}
-    \item Nothing moves for the first ${\sim}8$--16 steps
-      (rel.\ Frobenius $< 0.02$).
+    \item Nothing moves for the first ${\sim}8$ steps
+      (mean rel.\ Frobenius $\leq 0.004$).
     \item Then the Jacobian swings hard over roughly \emph{one decade} of
       steps, and flatlines.
-    \item 1b: $0.391$ at step 64 $\rightarrow$ $0.398$ at step 4882.
+    \item 1b: $0.299$ at step 64 $\rightarrow$ $0.279$ at step 4882.
       The last 4000 steps buy \textbf{zero} additional lens movement.
   \end{itemize}
   \vfill
-  {\footnotesize Most robust result --- holds at both sizes.}
+  {\footnotesize Most robust result --- holds at both sizes, and under either
+  the layer mean or the per-layer max (max: 0.349 / 0.398).}
 \end{frame}
 
 \begin{frame}{1. Drift --- \texttt{1b-it}}
@@ -157,65 +159,98 @@
 \end{frame}
 
 % ---------------------------------------------------------------- faithfulness
-\begin{frame}{2. Faithfulness inverts between the two scales}
-  Lens$\leftrightarrow$model KL at the final layer --- \emph{lower = lens
-  predicts the model better}.
+\begin{frame}{2. Medical holds or improves; generic degrades}
+  \small
+  Lens$\leftrightarrow$model KL, mean over the last $n/5$ layers
+  (the probe's \texttt{kl\_final}) --- \emph{lower = lens predicts the model
+  better}. Base $\rightarrow$ final checkpoint.
 
-  \vspace{0.8em}
+  \vspace{0.7em}
   \centering
   \begin{tabular}{lccc}
     \toprule
-    & KL general $0\!\rightarrow\!$final & KL medical $0\!\rightarrow\!$final
-    & top-1 medical $0\!\rightarrow\!$final \\
+    & KL \texttt{general} & KL \texttt{medical} & KL \texttt{multihop} (OOD) \\
     \midrule
-    \texttt{270m-it} & $1.482 \rightarrow 1.531$ \; (\bad{$+0.05$})
-                     & $1.861 \rightarrow 2.137$ \; (\bad{$+0.28$})
-                     & $0.44 \rightarrow$ \bad{$0.38$} \\
-    \texttt{1b-it}   & $0.481 \rightarrow 0.548$ \; (\bad{$+0.07$})
-                     & $0.591 \rightarrow 0.571$ \; (\good{$-0.02$})
-                     & $0.72 \rightarrow$ \good{$0.80$} \\
+    \texttt{270m-it} & $3.407 \rightarrow 3.497$ \; (\bad{$+0.09$})
+                     & $5.388 \rightarrow 5.340$ \; (\good{$-0.05$})
+                     & $1.958 \rightarrow 1.975$ \; (\bad{$+0.02$}) \\
+    \texttt{1b-it}   & $2.684 \rightarrow 3.229$ \; (\bad{$+0.54$})
+                     & $4.682 \rightarrow 4.314$ \; (\good{$-0.37$})
+                     & $2.423 \rightarrow 3.430$ \; (\bad{$+1.01$}) \\
+    \midrule
+    \multicolumn{4}{l}{\footnotesize top-1 \texttt{medical}: \;
+      270m $0.260 \rightarrow 0.260$ (flat) \quad\quad
+      1b $0.448 \rightarrow$ \good{$0.572$}} \\
     \bottomrule
   \end{tabular}
 
-  \vspace{1.2em}
+  \vspace{1.0em}
   \begin{itemize}
-    \item \textbf{270m:} medical KL rises 15\% and medical top-1 agreement
-      \emph{drops}, while the general control barely moves. Lens and model
-      diverge exactly on the trained domain.
-    \item \textbf{1b:} the inverse --- medical improves, \emph{general}
-      regresses.
+    \item \textbf{Same direction at both sizes}, differing in magnitude:
+      medical flat-to-better, \texttt{general} and \texttt{multihop} worse.
+    \item \textbf{1b moves ${\sim}7$--$50\times$ further} on every cue. At 270m
+      the lens barely registers the fine-tune --- consistent with 270m learning
+      no medicine behaviorally.
   \end{itemize}
+  \vfill
+  {\footnotesize \bad{Read-out caveat:} at the \emph{single} final layer, 270m
+  medical reads $1.861 \rightarrow 2.137$ ($+0.28$, \emph{worse}) --- the one
+  sign flip across all six cue/size pairs. Do not read 270m medical as a
+  degradation; it is flat under the layer-averaged metric and its top-1 does
+  not move.}
 \end{frame}
 
-\begin{frame}{2. What the 1b result actually is: the domain gap closing}
+\begin{frame}{2. What is really happening: the domain gap narrows}
+  \small
   \begin{columns}[T]
-    \begin{column}{0.52\textwidth}
-      \begin{itemize}
-        \item At $t=0$ there is a clear medical-vs-general gap:
-          KL $0.591$ vs.\ $0.481$.
-        \item The two cues \textbf{cross around steps 128--256}.
-        \item By the end they are indistinguishable:
-          $0.571$ vs.\ $0.548$.
-      \end{itemize}
-      \vspace{0.6em}
-      So this is not ``medical becomes more faithful'' in isolation --- it is
-      the \textbf{gap collapsing}, medical up and general down.
+    \begin{column}{0.50\textwidth}
+      Both arms start from an almost identical medical$-$general KL gap, and
+      both narrow it --- but 1b narrows it \textbf{6.6$\times$ harder}.
+      \vspace{0.5em}
+      \begin{tabular}{lccc}
+        \toprule
+        & gap $t{=}0$ & gap final & $\Delta$ \\
+        \midrule
+        \texttt{270m-it} & 1.981 & 1.843 & $-0.138$ \\
+        \texttt{1b-it}   & 1.998 & 1.085 & $\mathbf{-0.913}$ \\
+        \bottomrule
+      \end{tabular}
       \vspace{0.8em}
 
-      The held-out OOD cue is the cleaner read: \texttt{multihop} KL degrades
-      at \emph{both} sizes.
-      \begin{itemize}
-        \item 270m: $0.733 \rightarrow \mathbf{0.800}$
-        \item 1b: \phantom{0}$0.497 \rightarrow \mathbf{0.624}$
-      \end{itemize}
-      \vspace{0.4em}
+      Crucially the gap closes \textbf{from both ends} --- medical improves
+      \emph{and} general regresses toward it. It is not a free gain.
+      \vspace{0.6em}
+
+      \texttt{multihop}, the held-out externally-sourced cue, is the cleanest
+      read and degrades at \emph{both} sizes ($+0.02$ / $+1.01$).
+      \vspace{0.5em}
+
       \textbf{Generic-domain faithfulness is what medical SFT costs you.}
     \end{column}
-    \begin{column}{0.46\textwidth}
+    \begin{column}{0.48\textwidth}
       \centering
-      \includegraphics[width=\linewidth]{1b_it_full_v3/fig_kl.pdf}
+      \includegraphics[height=0.34\textheight]{1b_it_full_v3/fig_kl.pdf}\\[0.2em]
+      \includegraphics[height=0.34\textheight]{270m_it_full/fig_kl.pdf}
     \end{column}
   \end{columns}
+\end{frame}
+
+\begin{frame}{2. Base vs.\ finetuned, side by side}
+  \begin{columns}[T]
+    \begin{column}{0.5\textwidth}
+      \centering {\small \texttt{270m-it}}\\
+      \includegraphics[width=\linewidth]{270m_it_full/fig_base_vs_final.pdf}
+    \end{column}
+    \begin{column}{0.5\textwidth}
+      \centering {\small \texttt{1b-it}}\\
+      \includegraphics[width=\linewidth]{1b_it_full_v3/fig_base_vs_final.pdf}
+    \end{column}
+  \end{columns}
+  \vspace{0.4em}
+  {\footnotesize Pale bar = untuned base ($t{=}0$), solid = final checkpoint.
+  Same axes, same metrics --- the 270m deltas are near-invisible next to 1b's.
+  Note the cues are \emph{not} comparable across sizes in absolute KL
+  (different tokenizers and hidden dims); only the within-arm deltas are.}
 \end{frame}
 
 % ---------------------------------------------------------------- behavior
@@ -291,9 +326,14 @@
     \item \textbf{Top-1 is coarse.} $n{=}50$ per cue, so top-1 agreement
       quantizes at $0.02$ and single-checkpoint wiggles of $\pm 0.04$ are
       noise. \emph{Trust the KL trends, not top-1.}
-    \item \textbf{Two sizes is not a scaling trend.} The 270m$\leftrightarrow$1b
-      inversion in medical faithfulness is the most interesting claim here and
-      rests on exactly one pair. It needs 4b to be more than a hypothesis.
+    \item \textbf{Read-out choice is not innocent.} Layer-mean and final-layer
+      KL disagree in sign on 270m medical. Every claim here uses the layer mean;
+      an earlier draft of this deck used the final layer and reported a
+      270m$\leftrightarrow$1b \emph{inversion} that does not survive. Report the
+      statistic, not just the number.
+    \item \textbf{Two sizes is not a scaling trend.} ``1b moves far, 270m barely
+      moves'' rests on exactly one pair, and 270m is small enough that it may
+      simply be too weak to learn the task at all. Needs 4b.
     \item \textbf{The \texttt{general}/\texttt{medical} cues are
       hand-authored}, not sampled from a corpus --- the domain-gap result
       inherits whatever bias is in those 100 prompts. \texttt{multihop} is the

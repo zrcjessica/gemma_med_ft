@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 from pathlib import Path
 
 import matplotlib as mpl
@@ -153,7 +154,7 @@ def print_base_vs_final(rows):
           f"({f['drift']['relfro_mean'] - b['drift']['relfro_mean']:+.3f})")
 
 
-def plot_overview(rows, steps, x, out):
+def plot_overview(rows, steps, x, out, label):
     fig, axes = plt.subplots(1, 3, figsize=(13.5, 3.9))
     relf = [r["drift"]["relfro_mean"] for r in rows]
     axes[0].plot(x, relf, "-o", color=DRIFT, lw=2, ms=5, mfc="white", mew=1.4, mec=DRIFT)
@@ -173,31 +174,44 @@ def plot_overview(rows, steps, x, out):
     axes[2].legend(loc="best", fontsize=8)
     for ax in axes:
         style_x(ax, steps, x)
-    fig.suptitle("Gemma-3-1b-it · medical SFT · j-lens trajectory (base + 14 checkpoints)",
+    fig.suptitle(f"{label} · medical SFT · j-lens trajectory "
+                 f"(base + {len(rows) - 1} checkpoints)",
                  x=0.01, ha="left", fontsize=13, color=INK, weight="bold")
     fig.tight_layout(rect=(0, 0, 1, 0.95))
     fig.savefig(out, bbox_inches="tight")
     plt.close(fig)
 
 
+def infer_label(metrics_path):
+    """'eval/jlens/1b_it_full_v3/metrics.jsonl' -> 'Gemma-3-1b-it'."""
+    # not \b after the kind: '_' is a word char, so '270m_it_full' would not match
+    m = re.match(r"(270m|\d+b)_(pt|it)(?:_|$)", Path(metrics_path).parent.name)
+    return f"Gemma-3-{m.group(1)}-{m.group(2)}" if m else Path(metrics_path).parent.name
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--metrics", required=True)
     ap.add_argument("--outdir", required=True)
+    ap.add_argument("--label", default=None,
+                    help="Arm name for figure titles (default: inferred from the run dir).")
     args = ap.parse_args()
     out = Path(args.outdir); out.mkdir(parents=True, exist_ok=True)
     rows, steps, x = load(args.metrics)
+    label = args.label or infer_label(args.metrics)
 
     plot_drift(rows, steps, x, out / "fig_drift.pdf")
+    # Titles stay descriptive, not claim-laden: the same script renders every arm
+    # and the arms do not all move the same way. Interpretation belongs on the slide.
     plot_conc(rows, steps, x, "kl_final",
-              "KL(model ‖ lens)  (nats, final layers)",
-              "Faithfulness: the medical–general gap narrows over medical SFT",
+              "KL(model ‖ lens)  (nats, mean of last n/5 layers)",
+              f"{label} — faithfulness vs. the untuned base",
               out / "fig_kl.pdf")
     plot_conc(rows, steps, x, "top1_final",
-              "top-1 agreement (final layers)",
-              "Top-1 agreement: medical rises toward the general control",
+              "top-1 agreement (mean of last n/5 layers)",
+              f"{label} — top-1 agreement vs. the untuned base",
               out / "fig_top1.pdf")
-    plot_overview(rows, steps, x, out / "fig_overview.png")
+    plot_overview(rows, steps, x, out / "fig_overview.png", label)
     plot_base_vs_final(rows, out / "fig_base_vs_final.pdf")
     print("wrote:", *(p.name for p in sorted(out.glob("fig_*"))))
     print_base_vs_final(rows)
