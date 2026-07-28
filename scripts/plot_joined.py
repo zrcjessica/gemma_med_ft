@@ -52,7 +52,16 @@ def pearson(xs, ys):
     return num / (dx * dy) if dx and dy else float("nan")
 
 
-def plot(rows, out_pdf, out_png):
+def saturation_step(steps, ys):
+    """First step reaching 95% of the final value -- the plateau onset."""
+    target = 0.95 * ys[-1]
+    for s, y in zip(steps, ys):
+        if y >= target:
+            return s
+    return steps[-1]
+
+
+def plot(rows, out_pdf, out_png, suptitle):
     steps = [r["step"] for r in rows]
     x = list(range(len(rows)))
 
@@ -87,7 +96,8 @@ def plot(rows, out_pdf, out_png):
     drift = [r["lens"]["drift_relfro_max"] for r in rows]
     _series(a_drift, x, drift, DRIFT, "o", "drift")
     a_drift.set_ylabel("rel. Frobenius  ‖J−J₀‖/‖J₀‖")
-    a_drift.set_title("Jacobian drift — saturates by step 64", loc="left", color=INK)
+    a_drift.set_title(f"Jacobian drift — saturates by step {saturation_step(steps, drift)}",
+                      loc="left", color=INK)
     style_x(a_drift, steps, x)
 
     klg = [r["lens"]["kl_general_last"] for r in rows]
@@ -115,8 +125,7 @@ def plot(rows, out_pdf, out_png):
     a_sc.grid(alpha=0.7)
     a_sc.set_axisbelow(True)
 
-    fig.suptitle("Gemma-3-1b-it · medical SFT · raw accuracy collapses while medical ability rises",
-                 x=0.01, ha="left", fontsize=13.5, color=INK, weight="bold")
+    fig.suptitle(suptitle, x=0.01, ha="left", fontsize=13.5, color=INK, weight="bold")
     fig.tight_layout(rect=(0, 0, 1, 0.955))
     fig.savefig(out_pdf, bbox_inches="tight")
     fig.savefig(out_png, bbox_inches="tight")
@@ -127,12 +136,24 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--joined", required=True, help="joined.json from analyze_traj.py")
     ap.add_argument("--outdir", required=True)
+    ap.add_argument("--model", default=None,
+                    help="title label; default derived from the tag dir (e.g. 270m_it_full)")
+    # The headline claim is arm-specific and must not be inherited: at 1b parsed
+    # accuracy rises on all three benchmarks, at 270m it is flat-to-negative and
+    # only format compliance moves. Default to a neutral title; assert only what
+    # the arm's own numbers show.
+    ap.add_argument("--title", default=None, help="full suptitle; overrides the neutral default")
     args = ap.parse_args()
     rows = json.loads(Path(args.joined).read_text())
     rows = [r for r in rows if r["lens"]]
+    label = args.model
+    if label is None:
+        tag = Path(args.joined).resolve().parent.name.split("_")
+        label = f"Gemma-3-{tag[0]}-{tag[1]}" if len(tag) >= 2 else tag[0]
+    suptitle = args.title or f"{label} · medical SFT · behavioral trajectory vs. Jacobian lens"
     out = Path(args.outdir)
     out.mkdir(parents=True, exist_ok=True)
-    plot(rows, out / "fig_joined.pdf", out / "fig_joined.png")
+    plot(rows, out / "fig_joined.pdf", out / "fig_joined.png", suptitle)
     print("wrote:", out / "fig_joined.pdf", out / "fig_joined.png")
 
 
