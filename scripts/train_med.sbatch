@@ -44,7 +44,11 @@ VARIANT=${VARIANT:-$([[ "${LORA}" == "1" ]] && echo lora || echo full)}
 case "${SIZE}" in
     270m) PER_DEV_BS=${PER_DEV_BS:-4}; GRAD_ACC=${GRAD_ACC:-32} ;;
     1b)  PER_DEV_BS=${PER_DEV_BS:-8}; GRAD_ACC=${GRAD_ACC:-8} ;;
-    4b)  PER_DEV_BS=${PER_DEV_BS:-4}; GRAD_ACC=${GRAD_ACC:-8} ;;
+    # 4b at per_dev=4 OOMs on the lab's 40GB A100s (job 25799674): the fp32
+    # logits upcast in the loss is 4 x 2048 x 262144 x 4B = 8.2GiB, and ZeRO-3
+    # shards leave under 6GiB free. per_dev=1 cuts that to 2.1GiB; grad_acc
+    # goes to 32 to hold the same effective-128 clock on 4 GPUs.
+    4b)  PER_DEV_BS=${PER_DEV_BS:-1}; GRAD_ACC=${GRAD_ACC:-32} ;;
     12b) PER_DEV_BS=${PER_DEV_BS:-2}; GRAD_ACC=${GRAD_ACC:-8} ;;
     27b) PER_DEV_BS=${PER_DEV_BS:-1}; GRAD_ACC=${GRAD_ACC:-16} ;;
     *) echo "unknown SIZE ${SIZE}" >&2; exit 1 ;;
