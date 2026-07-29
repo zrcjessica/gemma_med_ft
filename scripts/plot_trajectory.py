@@ -56,7 +56,7 @@ def style_x(ax, steps, x):
     ax.margins(x=0.02)
 
 
-def plot_drift(rows, steps, x, out):
+def plot_drift(rows, steps, x, out, label):
     fig, (a1, a2) = plt.subplots(2, 1, figsize=(7.2, 4.6), sharex=True,
                                  gridspec_kw={"hspace": 0.12})
     relf = [r["drift"]["relfro_mean"] for r in rows]
@@ -66,8 +66,9 @@ def plot_drift(rows, steps, x, out):
     a1.grid(axis="y", alpha=0.7); a1.set_axisbelow(True)
     a2.plot(x, cos, "-s", color=MEDICAL, lw=2, ms=6, mfc="white", mew=1.6, mec=MEDICAL)
     a2.set_ylabel("cosine(J, J₀)")
-    a1.set_title("Jacobian drift from the base lens — fast reorganization, then plateau",
-                 loc="left", color=INK)
+    # The arm belongs in the image: the deck shows this figure for several arms,
+    # and an arm-agnostic title is how a mislabeled slide goes unnoticed.
+    a1.set_title(f"{label} — Jacobian drift from the base lens", loc="left", color=INK)
     style_x(a2, steps, x)
     fig.savefig(out, bbox_inches="tight")
     plt.close(fig)
@@ -103,40 +104,47 @@ def plot_conc(rows, steps, x, key, ylabel, title, out):
     plt.close(fig)
 
 
-def plot_base_vs_final(rows, out):
-    """Direct base(t=0) vs finetuned-final comparison — the change medical SFT
-    actually produced, per metric and per arm."""
+def plot_base_vs_final(rows, out, label, ylim_kl=None):
+    """Direct base(t=0) vs finetuned comparison — the change medical SFT
+    actually produced, per metric and per arm.
+
+    KL and top-1 get separate panels: on one shared axis a +0.12 top-1 move is a
+    sliver next to bars 3-5 nats tall, which buries the very number the deck
+    calls out. `ylim_kl` pins the KL axis so two arms shown side by side really
+    are on the same scale -- autoscaled, 270m's smaller deltas render *taller*
+    than 1b's. The step goes in the title because rows[-1] is only the final
+    checkpoint for a complete run; on a spike it is step 8.
+    """
     b, f = rows[0], rows[-1]
-    specs = [
-        ("KL general\n(nats)",  b["concordance"]["general"]["kl_final"],
-                                 f["concordance"]["general"]["kl_final"], GENERAL),
-        ("KL medical\n(nats)",  b["concordance"]["medical"]["kl_final"],
-                                 f["concordance"]["medical"]["kl_final"], MEDICAL),
-        ("top-1 general\n(frac)", b["concordance"]["general"]["top1_final"],
-                                   f["concordance"]["general"]["top1_final"], GENERAL),
-        ("top-1 medical\n(frac)", b["concordance"]["medical"]["top1_final"],
-                                   f["concordance"]["medical"]["top1_final"], MEDICAL),
+    panels = [
+        ("kl_final", "KL(model ‖ lens)  (nats)", ylim_kl),
+        ("top1_final", "top-1 agreement  (fraction)", (0, 1)),
     ]
-    fig, ax = plt.subplots(figsize=(7.6, 4.2))
-    xs = list(range(len(specs)))
+    cues = (("general", GENERAL), ("medical", MEDICAL))
+    fig, axes = plt.subplots(1, 2, figsize=(7.6, 4.2), gridspec_kw={"wspace": 0.3})
     w = 0.36
-    for i, (_, bv, fv, c) in enumerate(specs):
-        ax.bar(i - w / 2, bv, w, color=c, alpha=0.35, edgecolor=c, lw=1.2)
-        ax.bar(i + w / 2, fv, w, color=c, alpha=0.95, edgecolor=c, lw=1.2)
-        d = fv - bv
-        ax.annotate(f"{d:+.2f}", (i, max(bv, fv)), textcoords="offset points",
-                    xytext=(0, 4), ha="center", fontsize=8, color=MUTED)
-    ax.set_xticks(xs)
-    ax.set_xticklabels([s for s, *_ in specs], fontsize=8)
-    ax.set_ylabel("value (Δ = final − base)")
-    ax.set_title("Medical SFT vs. untuned baseline — net change at the final checkpoint",
-                 loc="left", color=INK)
-    # neutral shading legend: the base/final split is the fill alpha, not the arm color
+    for ax, (key, ylabel, ylim) in zip(axes, panels):
+        for i, (cue, c) in enumerate(cues):
+            bv = b["concordance"][cue][key]
+            fv = f["concordance"][cue][key]
+            ax.bar(i - w / 2, bv, w, color=c, alpha=0.35, edgecolor=c, lw=1.2)
+            ax.bar(i + w / 2, fv, w, color=c, alpha=0.95, edgecolor=c, lw=1.2)
+            ax.annotate(f"{fv - bv:+.2f}", (i, max(bv, fv)), textcoords="offset points",
+                        xytext=(0, 4), ha="center", fontsize=8, color=MUTED)
+        ax.set_xticks(list(range(len(cues))))
+        ax.set_xticklabels([c for c, _ in cues], fontsize=9)
+        ax.set_ylabel(ylabel)
+        if ylim:
+            ax.set_ylim(*ylim)
+        ax.grid(axis="y", alpha=0.7); ax.set_axisbelow(True)
+    # neutral shading legend: the base/final split is the fill alpha, not the cue color
     from matplotlib.patches import Patch
     handles = [Patch(facecolor=MUTED, alpha=0.35, edgecolor=MUTED, label="base (t=0)"),
-               Patch(facecolor=MUTED, alpha=0.95, edgecolor=MUTED, label="finetuned (final)")]
-    ax.legend(handles=handles, loc="upper right", fontsize=9)
-    ax.grid(axis="y", alpha=0.7); ax.set_axisbelow(True)
+               Patch(facecolor=MUTED, alpha=0.95, edgecolor=MUTED, label=f"step {f['step']}")]
+    axes[1].legend(handles=handles, loc="upper right", fontsize=9)
+    fig.suptitle(f"{label} — base (t=0) vs. step {f['step']}  ·  mean of last n/5 layers",
+                 x=0.01, ha="left", fontsize=12, color=INK, weight="bold")
+    fig.tight_layout(rect=(0, 0, 1, 0.93))
     fig.savefig(out, bbox_inches="tight")
     plt.close(fig)
 
@@ -184,9 +192,12 @@ def plot_overview(rows, steps, x, out, label):
 
 def infer_label(metrics_path):
     """'eval/jlens/1b_it_full_v3/metrics.jsonl' -> 'Gemma-3-1b-it'."""
+    # resolve() first: a bare '--metrics metrics.jsonl' run from inside the run
+    # dir has no parent component, and an empty label leaves a title starting " · ".
+    run_dir = Path(metrics_path).resolve().parent.name
     # not \b after the kind: '_' is a word char, so '270m_it_full' would not match
-    m = re.match(r"(270m|\d+b)_(pt|it)(?:_|$)", Path(metrics_path).parent.name)
-    return f"Gemma-3-{m.group(1)}-{m.group(2)}" if m else Path(metrics_path).parent.name
+    m = re.match(r"(270m|\d+b)_(pt|it)(?:_|$)", run_dir)
+    return f"Gemma-3-{m.group(1)}-{m.group(2)}" if m else run_dir
 
 
 def main():
@@ -195,12 +206,15 @@ def main():
     ap.add_argument("--outdir", required=True)
     ap.add_argument("--label", default=None,
                     help="Arm name for figure titles (default: inferred from the run dir).")
+    ap.add_argument("--ylim-kl", type=float, default=None,
+                    help="Pin the base-vs-final KL axis (nats), so arms rendered "
+                         "separately can be placed side by side on one scale.")
     args = ap.parse_args()
     out = Path(args.outdir); out.mkdir(parents=True, exist_ok=True)
     rows, steps, x = load(args.metrics)
     label = args.label or infer_label(args.metrics)
 
-    plot_drift(rows, steps, x, out / "fig_drift.pdf")
+    plot_drift(rows, steps, x, out / "fig_drift.pdf", label)
     # Titles stay descriptive, not claim-laden: the same script renders every arm
     # and the arms do not all move the same way. Interpretation belongs on the slide.
     plot_conc(rows, steps, x, "kl_final",
@@ -212,7 +226,8 @@ def main():
               f"{label} — top-1 agreement vs. the untuned base",
               out / "fig_top1.pdf")
     plot_overview(rows, steps, x, out / "fig_overview.png", label)
-    plot_base_vs_final(rows, out / "fig_base_vs_final.pdf")
+    plot_base_vs_final(rows, out / "fig_base_vs_final.pdf", label,
+                       ylim_kl=(0, args.ylim_kl) if args.ylim_kl else None)
     print("wrote:", *(p.name for p in sorted(out.glob("fig_*"))))
     print_base_vs_final(rows)
 

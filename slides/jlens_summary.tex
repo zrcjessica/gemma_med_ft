@@ -57,7 +57,10 @@
       reported as \emph{parsed} accuracy with parse rate alongside.
   \end{itemize}
   \vfill
-  {\footnotesize All lens numbers below are \textbf{final-layer} read-outs.
+  {\footnotesize All lens numbers below are the \textbf{mean over the last
+  $n/5$ source layers} (the probe's \texttt{kl\_final} / \texttt{top1\_final}):
+  3 layers at 270m, 5 at 1b. Where the single final layer disagrees, it is
+  called out explicitly --- see the read-out caveat.
   Coverage: 14 points (270m), 15 points (1b) --- both complete.}
 \end{frame}
 
@@ -188,24 +191,28 @@
   \begin{itemize}
     \item \textbf{Same direction at both sizes}, differing in magnitude:
       medical flat-to-better, \texttt{general} and \texttt{multihop} worse.
-    \item \textbf{1b moves ${\sim}7$--$50\times$ further} on every cue. At 270m
-      the lens barely registers the fine-tune --- consistent with 270m learning
-      no medicine behaviorally.
+    \item \textbf{1b moves $6$--$59\times$ further} on every cue
+      (\texttt{general} $6.0\times$, \texttt{medical} $7.6\times$,
+      \texttt{multihop} $59\times$). At 270m the lens barely registers the
+      fine-tune --- consistent with 270m learning no medicine behaviorally.
   \end{itemize}
   \vfill
   {\footnotesize \bad{Read-out caveat:} at the \emph{single} final layer, 270m
   medical reads $1.861 \rightarrow 2.137$ ($+0.28$, \emph{worse}) --- the one
   sign flip across all six cue/size pairs. Do not read 270m medical as a
-  degradation; it is flat under the layer-averaged metric and its top-1 does
-  not move.}
+  degradation: under the layer mean used here it is flat on both KL ($-0.05$)
+  and top-1 ($0.260 \rightarrow 0.260$). At the single final layer its top-1
+  \emph{also} falls ($0.44 \rightarrow 0.38$), so the two read-outs disagree on
+  that cue in both metrics.}
 \end{frame}
 
 \begin{frame}{2. What is really happening: the domain gap narrows}
   \small
   \begin{columns}[T]
     \begin{column}{0.50\textwidth}
-      Both arms start from an almost identical medical$-$general KL gap, and
-      both narrow it --- but 1b narrows it \textbf{6.6$\times$ harder}.
+      Within each arm the \texttt{medical} cue starts ${\sim}2$ nats less
+      faithful than \texttt{general}, and both arms narrow that gap --- but 1b
+      narrows it \textbf{6.6$\times$ harder}.
       \vspace{0.5em}
       \begin{tabular}{lccc}
         \toprule
@@ -215,17 +222,22 @@
         \texttt{1b-it}   & 1.998 & 1.085 & $\mathbf{-0.913}$ \\
         \bottomrule
       \end{tabular}
-      \vspace{0.8em}
+      \vspace{0.6em}
 
       Crucially the gap closes \textbf{from both ends} --- medical improves
       \emph{and} general regresses toward it. It is not a free gain.
-      \vspace{0.6em}
+      \vspace{0.4em}
 
       \texttt{multihop}, the held-out externally-sourced cue, is the cleanest
       read and degrades at \emph{both} sizes ($+0.02$ / $+1.01$).
-      \vspace{0.5em}
+      \vspace{0.4em}
 
       \textbf{Generic-domain faithfulness is what medical SFT costs you.}
+      \vspace{0.4em}
+
+      {\footnotesize The $t{=}0$ gaps landing $0.017$ apart is a coincidence,
+      not a finding --- absolute KL is not comparable across sizes. The claim
+      is the within-arm $\Delta$, and the $6.6\times$ inherits that caveat.}
     \end{column}
     \begin{column}{0.48\textwidth}
       \centering
@@ -247,10 +259,12 @@
     \end{column}
   \end{columns}
   \vspace{0.4em}
-  {\footnotesize Pale bar = untuned base ($t{=}0$), solid = final checkpoint.
-  Same axes, same metrics --- the 270m deltas are near-invisible next to 1b's.
-  Note the cues are \emph{not} comparable across sizes in absolute KL
-  (different tokenizers and hidden dims); only the within-arm deltas are.}
+  {\footnotesize Pale bar = untuned base ($t{=}0$), solid = step 4882. Both
+  figures are pinned to the same axes (KL $0$--$6$ nats, top-1 $0$--$1$), so the
+  panels are directly superimposable --- but compare the \emph{$\Delta$ labels},
+  not the bar heights: absolute KL is not comparable across sizes (different
+  tokenizers and hidden dims). Read that way, 270m's largest KL move ($+0.09$)
+  is about a quarter of 1b's smallest ($-0.37$).}
 \end{frame}
 
 % ---------------------------------------------------------------- behavior
@@ -293,7 +307,10 @@
 
 \begin{frame}{3. Joined behavioral + lens trajectory --- \texttt{270m-it}}
   \centering
-  \includegraphics[height=0.80\textheight]{270m_it_full/fig_joined.pdf}
+  \includegraphics[height=0.76\textheight]{270m_it_full/fig_joined.pdf}
+
+  {\footnotesize The KL panel is the layer mean, as everywhere else in this
+  deck; at the single final layer the medical curve rises instead.}
 \end{frame}
 
 % ---------------------------------------------------------------- timing
@@ -323,9 +340,13 @@
 % ---------------------------------------------------------------- caveats
 \begin{frame}{Caveats}
   \begin{itemize}
-    \item \textbf{Top-1 is coarse.} $n{=}50$ per cue, so top-1 agreement
-      quantizes at $0.02$ and single-checkpoint wiggles of $\pm 0.04$ are
-      noise. \emph{Trust the KL trends, not top-1.}
+    \item \textbf{Top-1 is coarse.} $n{=}50$ prompts for
+      \texttt{general}/\texttt{medical} ($93$ for \texttt{multihop}), so
+      \emph{per-layer} top-1 quantizes at $0.02$; the reported statistic
+      averages 3 layers (270m) or 5 (1b), giving a $1/150$--$1/250$ grain that
+      makes small moves look more precise than they are. Single-checkpoint
+      wiggles of $\pm 0.04$ are still noise. \emph{Trust the KL trends, not
+      top-1.}
     \item \textbf{Read-out choice is not innocent.} Layer-mean and final-layer
       KL disagree in sign on 270m medical. Every claim here uses the layer mean;
       an earlier draft of this deck used the final layer and reported a
@@ -348,8 +369,9 @@
 % ---------------------------------------------------------------- next
 \begin{frame}{Next}
   \begin{enumerate}
-    \item \textbf{4b-it full trajectory} --- the decisive test of whether the
-      medical-faithfulness inversion is a scale effect or a 270m artifact.
+    \item \textbf{4b-it full trajectory} --- the decisive test of whether
+      ``1b moves far, 270m barely moves'' is a scale effect or a property of
+      one arm, and whether the layer-mean/final-layer disagreement recurs.
     \item \textbf{Widen the \texttt{general}/\texttt{medical} cues} beyond the
       100 hand-authored prompts, to check the domain-gap collapse is not an
       artifact of how those pairs were written.

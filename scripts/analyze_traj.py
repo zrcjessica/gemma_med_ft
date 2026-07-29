@@ -52,6 +52,13 @@ def load_behavioral(traj_dir: Path, baseline: Path | None):
 
 
 def load_lens(metrics: Path):
+    """Both faithfulness read-outs, named for what they are.
+
+    `*_layermean` is the probe's `kl_final`/`top1_final`: the mean over the last
+    n//5 source layers, and the statistic every claim in the deck uses.
+    `*_last` is the single final layer. The two disagree in sign on 270m medical
+    (1.861 -> 2.137 vs 5.388 -> 5.340), so a figure must say which it plots.
+    """
     out = {}
     for line in open(metrics):
         r = json.loads(line)
@@ -59,6 +66,10 @@ def load_lens(metrics: Path):
         out[r["step"]] = {
             "drift_relfro_max": max(d["relfro_curve"]),
             "drift_cos_min": min(d["cos_curve"]),
+            "kl_general_layermean": c["general"]["kl_final"],
+            "kl_medical_layermean": c["medical"]["kl_final"],
+            "top1_general_layermean": c["general"]["top1_final"],
+            "top1_medical_layermean": c["medical"]["top1_final"],
             "kl_general_last": c["general"]["kl_curve"][-1],
             "kl_medical_last": c["medical"]["kl_curve"][-1],
             "top1_general_last": c["general"]["agree_curve"][-1],
@@ -78,7 +89,7 @@ def main():
     beh = load_behavioral(Path(args.traj_dir), Path(args.baseline) if args.baseline else None)
     lens = load_lens(Path(args.lens_metrics))
 
-    hdr = f"{'step':>6} {'drift':>7} {'KLgen':>7} {'KLmed':>7} |"
+    hdr = f"{'step':>6} {'drift':>7} {'KLgen':>7} {'KLmed':>7} |"  # KL = layer mean
     for b in BENCHMARKS:
         hdr += f" {b[:7]:>7} {'parsed':>7} {'parse%':>7} |"
     print(hdr)
@@ -89,7 +100,8 @@ def main():
         L = lens.get(step, {})
         line = (
             f"{step:>6} {L.get('drift_relfro_max', float('nan')):>7.3f} "
-            f"{L.get('kl_general_last', float('nan')):>7.3f} {L.get('kl_medical_last', float('nan')):>7.3f} |"
+            f"{L.get('kl_general_layermean', float('nan')):>7.3f} "
+            f"{L.get('kl_medical_layermean', float('nan')):>7.3f} |"
         )
         for b in BENCHMARKS:
             v = beh[step].get(b)

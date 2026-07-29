@@ -22,7 +22,9 @@ import matplotlib as mpl
 mpl.use("Agg")
 import matplotlib.pyplot as plt
 
-from plot_trajectory import INK, MUTED, GENERAL, MEDICAL, DRIFT, style_x  # noqa: E402
+from plot_trajectory import (  # noqa: E402
+    INK, MUTED, GENERAL, MEDICAL, DRIFT, infer_label, style_x,
+)
 
 BENCHMARKS = [("medqa", "MedQA"), ("medmcqa", "MedMCQA"), ("pubmedqa", "PubMedQA")]
 
@@ -100,13 +102,16 @@ def plot(rows, out_pdf, out_png, suptitle):
                       loc="left", color=INK)
     style_x(a_drift, steps, x)
 
-    klg = [r["lens"]["kl_general_last"] for r in rows]
-    klm = [r["lens"]["kl_medical_last"] for r in rows]
+    # Layer mean, not the single final layer: the two disagree in sign on 270m
+    # medical, and every claim in the deck is made under the layer mean. Plotting
+    # the other one here would show medical *rising* beside text saying it is flat.
+    klg = [r["lens"]["kl_general_layermean"] for r in rows]
+    klm = [r["lens"]["kl_medical_layermean"] for r in rows]
     _baseline(a_kl, klg[0], GENERAL)
     _baseline(a_kl, klm[0], MEDICAL)
     _series(a_kl, x, klg, GENERAL, "o", "general")
     _series(a_kl, x, klm, MEDICAL, "s", "medical")
-    a_kl.set_ylabel("KL(model ‖ lens)  (nats)")
+    a_kl.set_ylabel("KL(model ‖ lens)  (nats, mean of last n/5 layers)")
     a_kl.set_title("Lens faithfulness — still moving after drift stops", loc="left", color=INK)
     a_kl.legend(loc="best", fontsize=8.5)
     style_x(a_kl, steps, x)
@@ -118,7 +123,7 @@ def plot(rows, out_pdf, out_png, suptitle):
         if s in (0, 32, 512, 4882):
             a_sc.annotate("t=0" if s == 0 else str(s), (xi, yi), textcoords="offset points",
                           xytext=(6, 4), fontsize=7.5, color=MUTED)
-    a_sc.set_xlabel("KL(model ‖ lens), general cue (nats)")
+    a_sc.set_xlabel("KL(model ‖ lens), general cue (nats, layer mean)")
     a_sc.set_ylabel("MedMCQA parse rate (%)")
     a_sc.set_title(f"Faithfulness vs. format compliance  (r = {pearson(klg, pr):+.2f}, n={len(rows)})",
                    loc="left", color=INK)
@@ -146,10 +151,9 @@ def main():
     args = ap.parse_args()
     rows = json.loads(Path(args.joined).read_text())
     rows = [r for r in rows if r["lens"]]
-    label = args.model
-    if label is None:
-        tag = Path(args.joined).resolve().parent.name.split("_")
-        label = f"Gemma-3-{tag[0]}-{tag[1]}" if len(tag) >= 2 else tag[0]
+    # one label rule for the whole deck -- a local copy drifts (a bare split("_")
+    # turns '270m_verify' into "Gemma-3-270m-verify")
+    label = args.model or infer_label(args.joined)
     suptitle = args.title or f"{label} · medical SFT · behavioral trajectory vs. Jacobian lens"
     out = Path(args.outdir)
     out.mkdir(parents=True, exist_ok=True)
