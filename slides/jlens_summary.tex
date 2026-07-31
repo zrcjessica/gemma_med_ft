@@ -1,4 +1,4 @@
-% Jacobian-lens trajectory summary: gemma-3-270m-it and gemma-3-1b-it
+% Jacobian-lens trajectory summary: gemma-3-{270m,1b,4b}-it
 % Build:  tectonic slides/jlens_summary.tex
 \documentclass[aspectratio=169,10pt]{beamer}
 
@@ -24,7 +24,7 @@
 \newcommand{\bad}[1]{\textcolor{down}{#1}}
 
 \title{Jacobian-lens trajectories under medical SFT}
-\subtitle{\texttt{gemma-3-270m-it} and \texttt{gemma-3-1b-it}}
+\subtitle{\texttt{gemma-3-270m-it}, \texttt{gemma-3-1b-it}, \texttt{gemma-3-4b-it}}
 \author{}
 \date{\today}
 
@@ -41,8 +41,8 @@
 % ---------------------------------------------------------------- setup
 \begin{frame}{Setup}
   \begin{itemize}
-    \item \textbf{Two arms}, identical seed and data order:
-      \texttt{gemma-3-270m-it} and \texttt{gemma-3-1b-it}, full FT,
+    \item \textbf{Three arms}, identical seed and data order:
+      \texttt{gemma-3-\{270m,1b,4b\}-it}, full FT,
       lr $1\mathrm{e}{-5}$, completion-only loss.
     \item \textbf{Log-spaced checkpoints} $\{1,2,4,\dots,4096\}$ + final (4882).
       $t=0$ is the untouched base, prepended by the probe.
@@ -54,14 +54,18 @@
       style-matched control pairs) + 93 \texttt{multihop} from
       \texttt{jlens}'s \texttt{lens-eval-multihop.json}.
     \item \textbf{Behavioral} trajectory in parallel: MedQA, MedMCQA, PubMedQA,
-      reported as \emph{parsed} accuracy with parse rate alongside.
+      reported as \emph{answered} accuracy with answer rate alongside.
+      \textbf{Scored by an LLM judge}, not a regex --- see the instrument slide.
   \end{itemize}
   \vfill
   {\footnotesize All lens numbers below are the \textbf{mean over the last
   $n/5$ source layers} (the probe's \texttt{kl\_final} / \texttt{top1\_final}):
-  3 layers at 270m, 5 at 1b. Where the single final layer disagrees, it is
-  called out explicitly --- see the read-out caveat.
-  Coverage: 14 points (270m), 15 points (1b) --- both complete.}
+  3 layers at 270m, 5 at 1b, 6 at 4b. Where the single final layer disagrees, it
+  is called out explicitly --- see the read-out caveat.
+  Coverage: 14 / 15 / 14 points (270m / 1b / 4b) --- all three complete.
+  \textbf{Behavioral: 4b is judge-scored and complete (14 points incl.\ $t{=}0$);
+  270m and 1b are still on the superseded regex scorer} and are \emph{not}
+  comparable to it.}
 \end{frame}
 
 % ---------------------------------------------------------------- probe step
@@ -114,61 +118,216 @@
   requeue does not wipe the trajectory.}
 \end{frame}
 
+% ---------------------------------------------------------------- glossary
+\begin{frame}{Reading the metrics --- the two drift measures}
+  \footnotesize
+  $J_l$ = lens Jacobian at source layer $l$; $J_l^{0}$ = the same layer in the
+  $t{=}0$ base lens. $n$ = number of source layers (18 / 26 / 34 at
+  270m / 1b / 4b). Both measures are computed per layer, then averaged over
+  all $n$; both are exactly $0$ / $1$ at $t{=}0$ by construction.
+
+  \vspace{0.6em}
+  \begin{tabular}{@{}p{0.21\textwidth}p{0.36\textwidth}p{0.37\textwidth}@{}}
+    \toprule
+    Metric & How it is computed & Direction \\
+    \midrule
+    rel.\ Frobenius\newline\texttt{relfro\_mean}
+      & $\|J_l - J_l^{0}\|_F \,/\, \|J_l^{0}\|_F$ --- the \emph{size} of the
+        change, normalised by the base magnitude.
+      & \textbf{Neither better nor worse.} It says \emph{how far} the lens
+        moved, not whether the move helped. Larger = more change. \\
+    \addlinespace
+    cosine\newline\texttt{cos\_mean}
+      & $\langle J_l, J_l^{0}\rangle / (\|J_l\|\,\|J_l^{0}\|)$, flattened over
+        all entries --- the \emph{direction} of the change.
+      & \textbf{Neither.} $1$ = pointing the same way as the base; lower = more
+        rotation. Bounded above by 1. \\
+    \bottomrule
+  \end{tabular}
+
+  \vspace{0.8em}
+  {\footnotesize \textbf{Why both.} They can move independently: a lens can grow
+  in magnitude without rotating (relfro up, cosine ${\approx}1$) or rotate
+  without changing size. In practice they track each other here, which is itself
+  a mild sanity check on the fit.
+
+  \smallskip
+  \textbf{Not comparable across sizes.} $J_l$ has a different shape at every
+  arm, so only these normalised scalars travel --- never a raw Jacobian entry.}
+\end{frame}
+
+\begin{frame}{Reading the metrics --- the four faithfulness measures}
+  \footnotesize
+  All four compare the \textbf{lens read-out} against the \textbf{model's actual
+  next-token distribution}, at the last prompt token, averaged over the prompts
+  of one cue. They differ in which layers they read and how they score.
+
+  \vspace{0.5em}
+  \begin{tabular}{@{}p{0.21\textwidth}p{0.36\textwidth}p{0.37\textwidth}@{}}
+    \toprule
+    Metric & How it is computed & Direction \\
+    \midrule
+    faithfulness KL\newline\texttt{kl\_final}
+      & $\mathrm{KL}(\text{model}\,\|\,\text{lens})$, averaged over the
+        \textbf{last $n/5$ layers}. \emph{The workhorse metric.}
+      & \good{\textbf{Lower is better}} --- the lens predicts what the model
+        actually says. $0$ = perfect; unbounded above. \\
+    \addlinespace
+    top-1 agreement\newline\texttt{top1\_final}
+      & Fraction of prompts where $\arg\max$ lens $=$ $\arg\max$ model, same
+        last-$n/5$ layers.
+      & \good{\textbf{Higher is better}}, range $0$--$1$. Much coarser than KL
+        --- see caveats. \\
+    \addlinespace
+    \texttt{top1\_auc}
+      & The same agreement averaged over \textbf{all} $n$ layers, not just the
+        top fifth. Despite the name, a mean rather than an integral.
+      & \good{\textbf{Higher is better}} --- agreement holds deeper down the
+        stack, not only near the output. \\
+    \addlinespace
+    \texttt{crossover\_frac}
+      & Shallowest layer whose top-1 agreement reaches $0.5$, as a fraction of
+        depth; $1.0$ if it never does.
+      & \good{\textbf{Lower is better}} --- the lens locks onto the model's
+        answer earlier in depth. \\
+    \bottomrule
+  \end{tabular}
+
+  \vspace{0.5em}
+  {\scriptsize Cues: \texttt{general} / \texttt{medical} are the 50+50
+  hand-authored style-matched pairs; \texttt{multihop} the 93 externally sourced
+  prompts. \emph{The cue is the unit of comparison} --- medical is read against
+  general, never on its own. This deck reports \texttt{kl\_final} and
+  \texttt{top1\_final}; the other two are computed and stored but not used.}
+\end{frame}
+
+\begin{frame}{Reading the metrics --- direction, and what not to do}
+  \small
+  \begin{columns}[T]
+    \begin{column}{0.48\textwidth}
+      \textbf{Behavioral metrics}
+      \vspace{0.3em}
+      {\footnotesize
+      \begin{itemize}\setlength{\itemsep}{0.25em}
+        \item \textbf{answer rate} --- \% of generations that committed to an
+          option. \good{Higher better.} A pure \emph{format} measure.
+        \item \textbf{answered accuracy} --- accuracy among those only.
+          \good{Higher better.} \textbf{This is the knowledge signal.}
+        \item \textbf{raw accuracy} --- non-answers counted wrong.
+          \good{Higher better}, but confounded: it moves when \emph{either}
+          knowledge or formatting moves.
+      \end{itemize}}
+      \vspace{0.4em}
+      {\footnotesize \bad{Why it matters:} on 4b MedQA, raw accuracy falls
+      $52.9 \rightarrow 43.0$ by step 512 --- which reads as catastrophic
+      forgetting. Answered accuracy over the same span is $53.1 \rightarrow
+      51.4$, essentially flat. The entire drop is the answer rate going
+      $99.5\% \rightarrow 83.8\%$. Reporting raw alone inverts the finding, at
+      both sizes where it has been checked.}
+    \end{column}
+    \begin{column}{0.48\textwidth}
+      \textbf{Three rules for reading these numbers}
+      \vspace{0.3em}
+      {\footnotesize
+      \begin{enumerate}\setlength{\itemsep}{0.4em}
+        \item \textbf{Never compare absolute KL across sizes.} \texttt{kl\_final}
+          averages a \emph{different number of layers} per arm (3 / 5 / 6), over
+          models of different depth and width. Only the \textbf{within-arm
+          $\Delta$ from $t{=}0$} is comparable across arms.
+        \item \textbf{Always read against $t{=}0$.} Every figure carries the
+          untuned base as a dashed line or a pale bar. A finetuned-only number
+          says nothing.
+        \item \textbf{Name the read-out.} ``KL'' is ambiguous: the layer mean and
+          the single final layer disagree in sign on 270m medical. This deck is
+          the \textbf{layer mean} throughout.
+      \end{enumerate}}
+    \end{column}
+  \end{columns}
+  \vfill
+  {\footnotesize \textbf{Directional summary.} Drift (relfro $\uparrow$, cosine
+  $\downarrow$) says the lens \emph{changed}; KL $\uparrow$ and top-1 $\downarrow$
+  say the lens \emph{got worse at predicting the model}. The two are independent:
+  a lens can move a long way and stay faithful, or barely move and lose
+  faithfulness. Most of this deck is about which of those happened at each size.}
+\end{frame}
+
 % ---------------------------------------------------------------- headline
-\begin{frame}{Four findings}
-  \begin{enumerate}
-    \item \textbf{Drift has a sharp onset, then saturates.} The Jacobian
-      finishes moving in the first ${\sim}100$ steps; the remaining 97\% of
-      training adds nothing.
-    \item \textbf{Medical faithfulness improves at 1b, is flat at 270m ---
-      and generic faithfulness degrades at both.} The cost of medical SFT is
-      paid on the out-of-domain cues.
-    \item \textbf{Behavior confirms the split.} 1b gains $+5$--$7$ pp parsed
-      accuracy; 270m gains nothing and only churns format.
-    \item \textbf{Drift leads format collapse, both lead accuracy.} The lens
-      finishes moving before the model has learned any medicine.
+\begin{frame}{Five findings}
+  \begin{enumerate}\setlength{\itemsep}{0.35em}
+    \item \textbf{Drift has a sharp onset, then saturates} --- and at 4b it
+      partly \emph{retreats}. The Jacobian finishes moving in the first
+      ${\sim}100$ steps; the remaining 97\% of training adds nothing.
+    \item \textbf{The faithfulness cost of medical SFT scales with model size.}
+      $\Delta$KL on \texttt{general} is $+0.09 / +0.54 / +2.08$ and on
+      \texttt{multihop} $+0.02 / +1.01 / +1.63$ at 270m / 1b / 4b --- monotone
+      in size on both out-of-domain cues.
+    \item \textbf{The medical cue is not protected at 4b.} \bad{This overturns
+      the two-arm reading.} Medical KL goes $-0.05 / -0.37 / \mathbf{+1.19}$:
+      flat at 270m, better at 1b, clearly \emph{worse} at 4b.
+    \item \textbf{Medical SFT works at 4b --- and the lens cost is paid anyway.}
+      \good{$+5.3 / +8.3 / +14.6$ pp} answered accuracy on
+      MedQA / MedMCQA / PubMedQA over the untuned base. \textbf{So the size
+      where faithfulness degrades most is also the size that learns most};
+      the two are not in tension.
+    \item \textbf{Drift leads format collapse, both lead accuracy} --- now
+      confirmed at 4b. Drift vs.\ answer rate is $r = -0.74$ (MedQA) /
+      $\mathbf{-0.91}$ (MedMCQA); drift vs.\ \emph{answered} accuracy is
+      $+0.10 / +0.37$. The lens tracks formatting, not competence.
   \end{enumerate}
+  \vfill
+  {\footnotesize The two-arm version of this deck led with ``medical holds or
+  improves.'' At three sizes that is no longer the finding: what generalises is
+  the \emph{cost}, which grows with scale on every cue --- while the
+  \emph{benefit} grows with scale too.}
 \end{frame}
 
 % ---------------------------------------------------------------- drift
 \begin{frame}{1. Drift onsets sharply, then saturates}
   \centering
-  \begin{tabular}{lccc}
+  \begin{tabular}{lcccc}
     \toprule
-    & onset & plateau & final relfro / cos (layer mean) \\
+    & onset & plateau & peak relfro & final relfro / cos (layer mean) \\
     \midrule
-    \texttt{270m-it} & steps 32--64 & ${\sim}$step 128 & 0.249 / 0.976 \\
-    \texttt{1b-it}   & steps 8--32  & ${\sim}$step 64  & 0.279 / 0.956 \\
+    \texttt{270m-it} & steps 32--64 & ${\sim}$step 128 & 0.250 & 0.249 / 0.976 \\
+    \texttt{1b-it}   & steps 8--32  & ${\sim}$step 64  & 0.308 & 0.279 / 0.956 \\
+    \texttt{4b-it}   & steps 8--32  & ${\sim}$step 128 & 0.424 & 0.343 / 0.943 \\
     \bottomrule
   \end{tabular}
 
-  \vspace{1.2em}
-  \begin{itemize}
+  \vspace{1.0em}
+  \begin{itemize}\setlength{\itemsep}{0.2em}
     \item Nothing moves for the first ${\sim}8$ steps
-      (mean rel.\ Frobenius $\leq 0.004$).
+      (mean rel.\ Frobenius $\leq 0.008$ at all three sizes).
     \item Then the Jacobian swings hard over roughly \emph{one decade} of
-      steps, and flatlines.
-    \item 1b: $0.299$ at step 64 $\rightarrow$ $0.279$ at step 4882.
-      The last 4000 steps buy \textbf{zero} additional lens movement.
+      steps, and flatlines. \textbf{Onset is earlier and the swing larger the
+      bigger the model} (final relfro $0.249 < 0.279 < 0.343$).
+    \item \textbf{New at 4b: a late partial retreat.} Peak $0.424$ at step 512
+      $\rightarrow 0.343$ at 4882, a $19\%$ walk-back toward the base lens. 1b
+      shows a hint of the same ($-9\%$ from its step-2048 peak); 270m is flat.
   \end{itemize}
   \vfill
-  {\footnotesize Most robust result --- holds at both sizes, and under either
-  the layer mean or the per-layer max (max: 0.349 / 0.398).}
+  {\footnotesize Most robust result --- holds at all three sizes, and under
+  either the layer mean or the per-layer max (max: 0.349 / 0.398 / 0.479).}
 \end{frame}
 
-\begin{frame}{1. Drift --- \texttt{1b-it}}
+\begin{frame}{1. Drift --- \texttt{4b-it}}
   \centering
-  \includegraphics[height=0.78\textheight]{1b_it_full_v3/fig_drift.pdf}
+  \includegraphics[height=0.72\textheight]{4b_it_full/fig_drift.pdf}
+
+  {\footnotesize The cosine panel reads slightly \emph{above} 1.0 at steps
+  2--8. Cosine cannot exceed 1: this is fp32 dot-product accumulation over
+  ${\sim}6.5$M entries per layer while the norms use a stabler path. It is
+  visible only where drift is ${\approx}0$ and affects no step $\geq 16$.}
 \end{frame}
 
 % ---------------------------------------------------------------- faithfulness
-\begin{frame}{2. Medical holds or improves; generic degrades}
+\begin{frame}{2. The faithfulness cost scales with model size}
   \small
   Lens$\leftrightarrow$model KL, mean over the last $n/5$ layers
   (the probe's \texttt{kl\_final}) --- \emph{lower = lens predicts the model
   better}. Base $\rightarrow$ final checkpoint.
 
-  \vspace{0.7em}
+  \vspace{0.6em}
   \centering
   \begin{tabular}{lccc}
     \toprule
@@ -180,98 +339,240 @@
     \texttt{1b-it}   & $2.684 \rightarrow 3.229$ \; (\bad{$+0.54$})
                      & $4.682 \rightarrow 4.314$ \; (\good{$-0.37$})
                      & $2.423 \rightarrow 3.430$ \; (\bad{$+1.01$}) \\
+    \texttt{4b-it}   & $2.163 \rightarrow 4.243$ \; (\bad{$\mathbf{+2.08}$})
+                     & $4.683 \rightarrow 5.867$ \; (\bad{$\mathbf{+1.19}$})
+                     & $4.088 \rightarrow 5.715$ \; (\bad{$\mathbf{+1.63}$}) \\
     \midrule
     \multicolumn{4}{l}{\footnotesize top-1 \texttt{medical}: \;
-      270m $0.260 \rightarrow 0.260$ (flat) \quad\quad
-      1b $0.448 \rightarrow$ \good{$0.572$}} \\
+      270m $0.260 \rightarrow 0.260$ (flat) \quad
+      1b $0.448 \rightarrow$ \good{$0.572$} \quad
+      4b $0.677 \rightarrow$ \bad{$0.660$}} \\
+    \bottomrule
+  \end{tabular}
+
+  \vspace{0.9em}
+  \begin{itemize}\setlength{\itemsep}{0.2em}
+    \item \textbf{Monotone in size on both out-of-domain cues.}
+      \texttt{general} $+0.09 \rightarrow +0.54 \rightarrow +2.08$;
+      \texttt{multihop} $+0.02 \rightarrow +1.01 \rightarrow +1.63$.
+      Nothing here reverses with scale.
+    \item \textbf{Bigger models start more faithful and lose more of it.}
+      Base \texttt{general} KL falls with size
+      ($3.41 \rightarrow 2.68 \rightarrow 2.16$) while the damage grows --- so
+      the ranking at $t{=}0$ is the reverse of the ranking after SFT.
+  \end{itemize}
+  \vfill
+  {\footnotesize \good{Read-out check --- the 270m disagreement does \emph{not}
+  recur.} At 4b the layer mean and the single final layer agree in sign on all
+  three cues (\texttt{general} $+2.08$ vs.\ $+0.34$, \texttt{medical} $+1.19$
+  vs.\ $+0.09$, \texttt{multihop} $+1.63$ vs.\ $+0.24$). The lone sign flip in
+  this study remains 270m \texttt{medical}.}
+\end{frame}
+
+\begin{frame}{2. All three arms on one axis}
+  \centering
+  \includegraphics[width=0.82\textwidth]{arms/fig_arms.pdf}
+
+  \vspace{0.1em}
+  {\scriptsize Arms shaded light$\rightarrow$dark by size (an \emph{ordinal}
+  ramp --- size is ordered, so it does not take categorical hues). $x$ is the
+  real training step on a log axis, since the arms have different step grids;
+  $t{=}0$ is each arm's dashed baseline (top row) and the zero line (bottom
+  row), never a point.}
+\end{frame}
+
+\begin{frame}{3. The medical cue is not protected at 4b}
+  \small
+  The two-arm deck read this section as ``medical holds or improves, and the
+  cost is paid out-of-domain.'' \bad{At 4b that is false} --- medical degrades
+  by $+1.19$ nats.
+
+  \vspace{0.7em}
+  \centering
+  \begin{tabular}{lccc}
+    \toprule
+    & $\Delta$KL \texttt{medical} & reading \\
+    \midrule
+    \texttt{270m-it} & \good{$-0.05$} & flat --- the lens barely registers the fine-tune \\
+    \texttt{1b-it}   & \good{$-0.37$} & genuinely better, and top-1 agrees ($+0.124$) \\
+    \texttt{4b-it}   & \bad{$+1.19$}  & clearly worse, and top-1 agrees ($-0.017$) \\
     \bottomrule
   \end{tabular}
 
   \vspace{1.0em}
-  \begin{itemize}
-    \item \textbf{Same direction at both sizes}, differing in magnitude:
-      medical flat-to-better, \texttt{general} and \texttt{multihop} worse.
-    \item \textbf{1b moves $6$--$59\times$ further} on every cue
-      (\texttt{general} $6.0\times$, \texttt{medical} $7.6\times$,
-      \texttt{multihop} $59\times$). At 270m the lens barely registers the
-      fine-tune --- consistent with 270m learning no medicine behaviorally.
+  \begin{itemize}\setlength{\itemsep}{0.2em}
+    \item \textbf{What survives:} medical is always the \emph{least damaged}
+      cue of the three at its own size. At 4b, \texttt{general} $+2.08$ and
+      \texttt{multihop} $+1.63$ are both worse than medical's $+1.19$.
+    \item \textbf{What does not survive:} ``medical improves.'' That was a
+      1b-shaped result, and 1b is the only arm where it happens.
   \end{itemize}
   \vfill
-  {\footnotesize \bad{Read-out caveat:} at the \emph{single} final layer, 270m
-  medical reads $1.861 \rightarrow 2.137$ ($+0.28$, \emph{worse}) --- the one
-  sign flip across all six cue/size pairs. Do not read 270m medical as a
-  degradation: under the layer mean used here it is flat on both KL ($-0.05$)
-  and top-1 ($0.260 \rightarrow 0.260$). At the single final layer its top-1
-  \emph{also} falls ($0.44 \rightarrow 0.38$), so the two read-outs disagree on
-  that cue in both metrics.}
+  {\footnotesize So medical SFT does buy the medical cue \emph{relative} ground
+  at every size --- but at 4b it buys relative ground while everything,
+  including medicine, gets absolutely less faithful.}
 \end{frame}
 
-\begin{frame}{2. What is really happening: the domain gap narrows}
+\begin{frame}{3. The domain gap narrows --- at 4b from one end only}
   \small
   \begin{columns}[T]
-    \begin{column}{0.50\textwidth}
-      Within each arm the \texttt{medical} cue starts ${\sim}2$ nats less
-      faithful than \texttt{general}, and both arms narrow that gap --- but 1b
-      narrows it \textbf{6.6$\times$ harder}.
-      \vspace{0.5em}
-      \begin{tabular}{lccc}
+    \begin{column}{0.53\textwidth}
+      Within each arm the \texttt{medical} cue starts $2$--$2.5$ nats less
+      faithful than \texttt{general}. \textbf{All three arms narrow that gap}
+      --- but not by the same mechanism.
+      \vspace{0.4em}
+
+      \centering
+      \begin{tabular}{lcccl}
         \toprule
-        & gap $t{=}0$ & gap final & $\Delta$ \\
+        & $t{=}0$ & final & $\Delta$ & closes by \\
         \midrule
-        \texttt{270m-it} & 1.981 & 1.843 & $-0.138$ \\
-        \texttt{1b-it}   & 1.998 & 1.085 & $\mathbf{-0.913}$ \\
+        \texttt{270m-it} & 1.982 & 1.843 & $-0.139$ & both ends \\
+        \texttt{1b-it}   & 1.998 & 1.085 & $\mathbf{-0.912}$ & both ends \\
+        \texttt{4b-it}   & 2.520 & 1.624 & $\mathbf{-0.896}$ & \bad{general only} \\
         \bottomrule
       \end{tabular}
+
+      \raggedright
       \vspace{0.6em}
+      At 270m and 1b the gap closes \textbf{from both ends} --- medical improves
+      \emph{and} general regresses toward it.
+      \vspace{0.3em}
 
-      Crucially the gap closes \textbf{from both ends} --- medical improves
-      \emph{and} general regresses toward it. It is not a free gain.
-      \vspace{0.4em}
+      \bad{At 4b it closes from one end}: both cues degrade, \texttt{general}
+      just faster ($+2.08$ vs.\ $+1.19$). \textbf{An identical $-0.9$ gap change
+      means opposite things at 1b and 4b} --- which is why the gap is never
+      reported on its own.
+      \vspace{0.3em}
 
-      \texttt{multihop}, the held-out externally-sourced cue, is the cleanest
-      read and degrades at \emph{both} sizes ($+0.02$ / $+1.01$).
-      \vspace{0.4em}
-
-      \textbf{Generic-domain faithfulness is what medical SFT costs you.}
-      \vspace{0.4em}
-
-      {\footnotesize The $t{=}0$ gaps landing $0.017$ apart is a coincidence,
-      not a finding --- absolute KL is not comparable across sizes. The claim
-      is the within-arm $\Delta$, and the $6.6\times$ inherits that caveat.}
+      \texttt{multihop} degrades at \emph{all three} sizes
+      ($+0.02$ / $+1.01$ / $+1.63$).
     \end{column}
-    \begin{column}{0.48\textwidth}
+    \begin{column}{0.45\textwidth}
       \centering
-      \includegraphics[height=0.34\textheight]{1b_it_full_v3/fig_kl.pdf}\\[0.2em]
-      \includegraphics[height=0.34\textheight]{270m_it_full/fig_kl.pdf}
+      \includegraphics[width=\linewidth]{4b_it_full/fig_kl.pdf}
+
+      \vspace{0.3em}
+      {\scriptsize The 4b panel alone: \emph{both} curves rise away from their
+      dashed $t{=}0$ baselines, the general one further. The 270m and 1b
+      equivalents are on the previous slide.}
     \end{column}
   \end{columns}
 \end{frame}
 
-\begin{frame}{2. Base vs.\ finetuned, side by side}
+\begin{frame}{3. Base vs.\ finetuned, side by side}
   \begin{columns}[T]
-    \begin{column}{0.5\textwidth}
+    \begin{column}{0.333\textwidth}
       \centering {\small \texttt{270m-it}}\\
       \includegraphics[width=\linewidth]{270m_it_full/fig_base_vs_final.pdf}
     \end{column}
-    \begin{column}{0.5\textwidth}
+    \begin{column}{0.333\textwidth}
       \centering {\small \texttt{1b-it}}\\
       \includegraphics[width=\linewidth]{1b_it_full_v3/fig_base_vs_final.pdf}
     \end{column}
+    \begin{column}{0.333\textwidth}
+      \centering {\small \texttt{4b-it}}\\
+      \includegraphics[width=\linewidth]{4b_it_full/fig_base_vs_final.pdf}
+    \end{column}
   \end{columns}
   \vspace{0.4em}
-  {\footnotesize Pale bar = untuned base ($t{=}0$), solid = step 4882. Both
+  {\footnotesize Pale bar = untuned base ($t{=}0$), solid = step 4882. All three
   figures are pinned to the same axes (KL $0$--$6$ nats, top-1 $0$--$1$), so the
   panels are directly superimposable --- but compare the \emph{$\Delta$ labels},
   not the bar heights: absolute KL is not comparable across sizes (different
-  tokenizers and hidden dims). Read that way, 270m's largest KL move ($+0.09$)
-  is about a quarter of 1b's smallest ($-0.37$).}
+  depth and width, and a different number of layers in the $n/5$ mean). Read
+  that way, 270m's largest KL move ($+0.09$) is about a quarter of 1b's smallest
+  ($-0.37$), and 4b's smallest ($+1.19$) is larger than either arm's biggest.}
 \end{frame}
 
 % ---------------------------------------------------------------- behavior
-\begin{frame}{3. Behavior confirms the two scales differ}
-  Parsed accuracy (parse rate in parentheses):
+\begin{frame}{4. The scoring instrument changed}
+  \small
+  Behavioral scoring is no longer a regex over the generations. It is an
+  \textbf{LLM judge} (\texttt{gemma\_med.judge}): the model's response, the
+  options and the gold answer go to \texttt{claude-haiku-4-5} under a
+  schema-constrained verdict of \texttt{correct} / \texttt{incorrect} /
+  \texttt{no\_answer}.
 
-  \vspace{0.8em}
+  \vspace{0.5em}
+  \begin{columns}[T]
+    \begin{column}{0.49\textwidth}
+      {\footnotesize
+      \textbf{Why it is a better instrument}
+      \begin{itemize}\setlength{\itemsep}{0.2em}
+        \item It matches option \emph{content}, not the letter: ``A.\ \emph{[text
+          of option C]}'' scores as a choice of C. The regex scored it as A.
+        \item It is told the gold answer and \textbf{forbidden to re-derive it},
+          so the metric stays benchmark accuracy --- not agreement between two
+          models.
+        \item \texttt{no\_answer} is the successor to ``unparsed'', so the
+          three-way split survives intact.
+      \end{itemize}}
+    \end{column}
+    \begin{column}{0.49\textwidth}
+      {\footnotesize
+      \textbf{What it costs you}
+      \begin{itemize}\setlength{\itemsep}{0.2em}
+        \item \bad{Judge numbers are not comparable to regex numbers.} It is
+          strictly more generous, so a rise could be the instrument.
+          \textbf{Only the 4b arm has been re-scored}; the 270m and 1b tables
+          that follow are still regex.
+        \item The judge is \textbf{frozen} per trajectory and recorded in
+          \texttt{judged\_summary.json}, exactly like the fit corpus and probe
+          set.
+      \end{itemize}}
+    \end{column}
+  \end{columns}
+
+  \vspace{0.4em}
+  {\scriptsize \good{Cross-validated.} On 300 identical MedQA rows at 4b
+  step-1024, \texttt{claude-haiku-4-5} and the lab's self-hosted Kimi agree to
+  within $1.3$ pp raw ($45.0$ vs.\ $46.3$) and $0.3$ pp on answer rate. Freezing
+  the judge is about reproducibility, not about either being wrong.}
+\end{frame}
+
+\begin{frame}{4. Behavior --- \texttt{4b-it} learns, and learns most}
+  \small
+  Judge-scored. Answered accuracy, with answer rate in parentheses.
+  $t{=}0$ is the untuned \texttt{gemma-3-4b-it}.
+
+  \vspace{0.6em}
+  \centering
+  \begin{tabular}{lccc}
+    \toprule
+    & MedQA & MedMCQA & PubMedQA \\
+    \midrule
+    \texttt{4b-it} $t{=}0$     & 53.1 \; (99.5\%) & 46.8 \; (99.7\%) & 58.2 \; (100\%) \\
+    \texttt{4b-it} step 512    & 51.4 \; (\bad{83.8\%}) & 46.2 \; (\bad{89.2\%}) & 73.7 \; (99.6\%) \\
+    \texttt{4b-it} final       & \good{\textbf{58.4}} \; (96.5\%)
+                               & \good{\textbf{55.1}} \; (92.2\%)
+                               & \good{\textbf{72.8}} \; (99.4\%) \\
+    \midrule
+    $\Delta$ vs.\ base         & \good{$+5.3$} & \good{$+8.3$} & \good{$+14.6$} \\
+    \bottomrule
+  \end{tabular}
+
+  \vspace{0.9em}
+  \begin{itemize}\setlength{\itemsep}{0.2em}
+    \item \textbf{The gain arrives late.} Nothing moves on MedQA/MedMCQA until
+      step ${\sim}2048$; the first two thirds of training only degrade format.
+    \item \textbf{PubMedQA is the exception} --- it climbs from step 16 and is
+      most of the way up by step 512, well before the MCQ benchmarks move.
+    \item \bad{Mid-trajectory raw accuracy is a trap.} Raw MedQA bottoms at
+      $43.0$ (step 512) while answered accuracy is $51.4$ --- see the metrics
+      slide.
+  \end{itemize}
+  \vfill
+  {\footnotesize \bad{Not comparable to the 270m/1b table overleaf:} that one is
+  regex-scored on the superseded instrument.}
+\end{frame}
+
+\begin{frame}{4. Behavior --- \texttt{270m-it} / \texttt{1b-it} \small(regex-scored, superseded instrument)}
+  Parsed accuracy (parse rate in parentheses). \bad{Retained from the previous
+  version of this deck. These have not been re-scored with the judge and must
+  not be tabulated against the 4b numbers.}
+
+  \vspace{0.6em}
   \centering
   \begin{tabular}{lccc}
     \toprule
@@ -287,7 +588,7 @@
     \bottomrule
   \end{tabular}
 
-  \vspace{1.2em}
+  \vspace{1.0em}
   \begin{itemize}
     \item \textbf{270m learns nothing.} MedQA/MedMCQA sit near chance
       throughout; every apparent movement is format churn (MedMCQA parse
@@ -296,16 +597,64 @@
       compliance collapses, worst on MedQA ($100\% \rightarrow 25\%$).
   \end{itemize}
   \vfill
-  {\footnotesize Reported parsed, not raw: the raw MedQA number would show a
-  \emph{loss} purely from the parse-rate collapse.}
+  {\footnotesize The \emph{qualitative} 270m-vs-1b split (one learns, one only
+  churns format) is instrument-independent. The pp values are not; re-judging
+  both arms is the top item on Next.}
 \end{frame}
 
-\begin{frame}{3. Joined behavioral + lens trajectory --- \texttt{1b-it}}
+\begin{frame}{4. A second failure mode: collapse onto the majority label}
+  \small
+  Format collapse is not the only thing that goes wrong mid-training. Share of
+  \emph{answered} items assigned to the dominant label, against that label's
+  prevalence in the gold answers:
+
+  \vspace{0.5em}
+  \centering
+  \begin{tabular}{lcccccc}
+    \toprule
+    & \multicolumn{2}{c}{MedQA (``A'')} & \multicolumn{2}{c}{MedMCQA (``A'')}
+    & \multicolumn{2}{c}{PubMedQA (``yes'')} \\
+    \cmidrule(lr){2-3}\cmidrule(lr){4-5}\cmidrule(lr){6-7}
+    & chosen & gold & chosen & gold & chosen & gold \\
+    \midrule
+    $t{=}0$      & 21.9 & 27.7 & 22.2 & 32.2 & 51.2 & 55.2 \\
+    step 512     & 31.4 & 27.7 & 41.9 & 32.2 & 64.1 & 55.2 \\
+    step 1024    & \bad{\textbf{57.2}} & 27.7 & \bad{\textbf{52.5}} & 32.2 & 69.9 & 55.2 \\
+    final        & 34.3 & 27.7 & 38.5 & 32.2 & 65.8 & 55.2 \\
+    \bottomrule
+  \end{tabular}
+
+  \vspace{0.8em}
+  \begin{itemize}\setlength{\itemsep}{0.2em}
+    \item \textbf{The base model is \emph{anti}-majority} ($21.9$ vs.\ $27.7$).
+      SFT pushes it through neutral and overshoots.
+    \item \textbf{Step 1024 is a spike, not a trend} --- it recovers. Worth
+      knowing before building a story on any single checkpoint.
+    \item \textbf{PubMedQA is the control that reframes it.} It has no ``A'' to
+      collapse onto, yet shows the same overshoot on ``yes''. So this is
+      \textbf{majority-label over-commitment, not position bias.}
+  \end{itemize}
+  \vfill
+  {\footnotesize The two modes trade off: steps 32--512 lose format compliance
+  while answered accuracy holds; step 1024 recovers compliance but concentrates
+  its answers; 2048+ resolves both.}
+\end{frame}
+
+\begin{frame}{4. Joined behavioral + lens trajectory --- \texttt{4b-it}}
+  \centering
+  \includegraphics[height=0.78\textheight]{4b_it_full/fig_joined.pdf}
+
+  {\footnotesize Judge-scored. Top row: answer rate (blue) separates cleanly
+  from answered accuracy (orange) from step 32 --- the format/knowledge split
+  made visible.}
+\end{frame}
+
+\begin{frame}{4. Joined behavioral + lens trajectory --- \texttt{1b-it}}
   \centering
   \includegraphics[height=0.80\textheight]{1b_it_full_v3/fig_joined.pdf}
 \end{frame}
 
-\begin{frame}{3. Joined behavioral + lens trajectory --- \texttt{270m-it}}
+\begin{frame}{4. Joined behavioral + lens trajectory --- \texttt{270m-it}}
   \centering
   \includegraphics[height=0.76\textheight]{270m_it_full/fig_joined.pdf}
 
@@ -314,36 +663,55 @@
 \end{frame}
 
 % ---------------------------------------------------------------- timing
-\begin{frame}{4. Timing: drift leads format collapse, both lead accuracy}
-  For \texttt{1b-it} the three curves are offset:
+\begin{frame}{5. Timing: drift leads format collapse, both lead accuracy}
+  \small
+  The same ordering holds at both sizes where behavior exists. \texttt{4b-it}
+  (judge-scored):
 
-  \vspace{0.8em}
+  \vspace{0.5em}
   \centering
   \begin{tabular}{lll}
     \toprule
     Signal & Onset & Notes \\
     \midrule
-    Jacobian drift      & steps 8--32   & plateaus by step 64 \\
-    Format compliance   & step 32       & MedQA parse $100 \rightarrow 93 \rightarrow 74\%$ by 128 \\
-    Task accuracy       & steps 2048+   & MedQA still ${\sim}30$ at step 512; 38 only at 4096--4882 \\
+    Jacobian drift      & steps 16--32  & $0.027 \rightarrow 0.331$; plateaus by step 64 \\
+    Format compliance   & step 32       & MedQA answer rate $99 \rightarrow 88\%$, floor $83.8\%$ at 512 \\
+    Task accuracy       & steps 2048+   & MedQA answered $51$ at step 512; $58$--$60$ only at 4096--4882 \\
     \bottomrule
   \end{tabular}
 
-  \vspace{1.5em}
+  \vspace{0.9em}
+  \textbf{And the correlations say which one the lens is tracking:}
+
+  \vspace{0.3em}
+  \centering
+  \begin{tabular}{lccc}
+    \toprule
+    Pearson $r$ vs.\ drift & MedQA & MedMCQA & PubMedQA \\
+    \midrule
+    answer rate (format)      & \bad{$-0.737$} & \bad{$\mathbf{-0.912}$} & $-0.415$ \\
+    answered accuracy (knowledge) & $+0.100$ & $+0.373$ & \good{$+0.910$} \\
+    \bottomrule
+  \end{tabular}
+
+  \vspace{0.8em}
   \begin{block}{Interpretation}
     The Jacobian has \textbf{finished moving before the model has learned any
-    medicine}. Whatever the lens is tracking here is the format / style /
-    alignment shift --- not task competence.
+    medicine}, and it moves \emph{with} format collapse ($r \approx -0.9$ on
+    MedMCQA), not with competence ($r \approx +0.1$ on MedQA). Whatever the lens
+    tracks here is the format / style / alignment shift. \emph{PubMedQA is the
+    exception --- its accuracy rises early, on the same clock as drift.}
   \end{block}
 \end{frame}
 
 % ---------------------------------------------------------------- caveats
-\begin{frame}{Caveats}
-  \begin{itemize}
+\begin{frame}{Caveats --- the measurements}
+  \small
+  \begin{itemize}\setlength{\itemsep}{0.5em}
     \item \textbf{Top-1 is coarse.} $n{=}50$ prompts for
       \texttt{general}/\texttt{medical} ($93$ for \texttt{multihop}), so
       \emph{per-layer} top-1 quantizes at $0.02$; the reported statistic
-      averages 3 layers (270m) or 5 (1b), giving a $1/150$--$1/250$ grain that
+      averages 3 / 5 / 6 layers, giving a $1/150$--$1/300$ grain that
       makes small moves look more precise than they are. Single-checkpoint
       wiggles of $\pm 0.04$ are still noise. \emph{Trust the KL trends, not
       top-1.}
@@ -351,27 +719,54 @@
       KL disagree in sign on 270m medical. Every claim here uses the layer mean;
       an earlier draft of this deck used the final layer and reported a
       270m$\leftrightarrow$1b \emph{inversion} that does not survive. Report the
-      statistic, not just the number.
-    \item \textbf{Two sizes is not a scaling trend.} ``1b moves far, 270m barely
-      moves'' rests on exactly one pair, and 270m is small enough that it may
-      simply be too weak to learn the task at all. Needs 4b.
+      statistic, not just the number. \good{(It does not recur at 4b.)}
+    \item \textbf{A numerical artifact in the drift cosine.} At 4b steps 2--8,
+      \texttt{cos\_mean} reads $1.001$--$1.003$; cosine cannot exceed 1. The
+      fp32 \texttt{dot} over ${\sim}6.5$M entries per layer is biased against
+      the stabler norm computation. Only visible where drift ${\approx}0$; no
+      reported claim depends on it, but \texttt{jac\_drift} should accumulate
+      in fp64.
     \item \textbf{The \texttt{general}/\texttt{medical} cues are
       hand-authored}, not sampled from a corpus --- the domain-gap result
       inherits whatever bias is in those 100 prompts. \texttt{multihop} is the
       one cue with an external, independently-constructed source.
-    \item \textbf{Coverage gaps.} \texttt{4b\_it\_validate\{,2\}} are 5-point
-      wrapper-validation spikes (base + steps 1--8), not trajectories.
-      No \texttt{-pt} arm exists at any size --- the pt-vs-it starting-point
-      axis is entirely unstarted.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{Caveats --- the scope}
+  \small
+  \begin{itemize}\setlength{\itemsep}{0.7em}
+    \item \textbf{Three sizes is a thin scaling trend.} The monotone cost on
+      \texttt{general}/\texttt{multihop} now rests on three points spanning
+      ${\sim}15\times$ in parameters, which is better than the two-point version
+      it replaces --- but 270m may simply be too weak to learn the task at all,
+      so the low end is a weak anchor. 12b/27b would settle it.
+    \item \good{\textbf{The 4b behavioral arm now exists}} --- findings 4 and 5
+      hold at the size where the lens result is strongest. \bad{The gap moved
+      rather than closed:} 4b is judge-scored and 270m/1b are regex-scored, so
+      \textbf{no cross-size behavioral comparison is currently legitimate}.
+      Re-judging the two smaller arms (${\sim}\$32$ and ${\sim}22$ min each)
+      is what unblocks it.
+    \item \textbf{One hyperparameter setting.} All three arms are full FT at
+      lr $1\mathrm{e}{-5}$ on one mixture. Whether the size trend is really
+      about \emph{size}, or about a fixed LR being progressively too large as
+      the model grows, is not separable from these runs alone.
+    \item \textbf{Coverage gaps.} The 4b run has no \texttt{checkpoint-1}, so
+      its grid starts at step 2 (270m likewise; only 1b probed step 1). No
+      \texttt{-pt} arm exists at any size --- the pt-vs-it starting-point axis
+      is entirely unstarted.
   \end{itemize}
 \end{frame}
 
 % ---------------------------------------------------------------- next
 \begin{frame}{Next}
-  \begin{enumerate}
-    \item \textbf{4b-it full trajectory} --- the decisive test of whether
-      ``1b moves far, 270m barely moves'' is a scale effect or a property of
-      one arm, and whether the layer-mean/final-layer disagreement recurs.
+  \begin{enumerate}\setlength{\itemsep}{0.3em}
+    \item \textbf{Re-judge 270m and 1b} with the same frozen judge --- now the
+      most valuable missing piece. Until then the deck has one judge-scored arm
+      and two regex-scored ones, and \emph{no} behavioral claim can be made
+      across sizes. One command per arm, ${\sim}\$32$ and ${\sim}22$ min each.
+    \item \textbf{12b (LoRA, caveated)} to test whether the monotone cost keeps
+      climbing or turns over. Three points is a direction, not a curve.
     \item \textbf{Widen the \texttt{general}/\texttt{medical} cues} beyond the
       100 hand-authored prompts, to check the domain-gap collapse is not an
       artifact of how those pairs were written.
@@ -380,6 +775,12 @@
     \item \textbf{Anchor against \texttt{medgemma-27b-text-it}} on the same
       probe set to place the trajectory endpoints on an absolute scale.
   \end{enumerate}
+  \vfill
+  {\footnotesize Answered since the last version: the \textbf{4b behavioral
+  trajectory now exists} (judge-scored, 14 points incl.\ $t{=}0$) --- medical
+  SFT gains $+5.3 / +8.3 / +14.6$ pp at 4b, and the drift-leads-format ordering
+  is confirmed at $r = -0.91$. Also: the lens trajectory exists at 4b, and the
+  layer-mean/final-layer disagreement does \emph{not} recur there.}
 \end{frame}
 
 \begin{frame}{Data provenance}
@@ -390,26 +791,73 @@
     \midrule
     Lens metrics (270m) & \texttt{eval/jlens/270m\_it\_full/metrics.jsonl} (14 rows) \\
     Lens metrics (1b)   & \texttt{eval/jlens/1b\_it\_full\_v3/metrics.jsonl} (15 rows) \\
-    Joined traj.\ (270m)& \texttt{eval/traj/270m\_it\_full/joined.json} \\
-    Joined traj.\ (1b)  & \texttt{eval/traj/1b\_it\_full\_v3/joined.json} \\
+    Lens metrics (4b)   & \texttt{eval/jlens/4b\_it\_full/metrics.jsonl} (14 rows) \\
+    Joined traj.\ (270m)& \texttt{eval/traj/270m\_it\_full/joined.json} \bad{(regex)} \\
+    Joined traj.\ (1b)  & \texttt{eval/traj/1b\_it\_full\_v3/joined.json} \bad{(regex)} \\
+    Joined traj.\ (4b)  & \texttt{eval/traj/4b\_it\_full/joined.json} \good{(judge)} \\
     Fit corpus          & \texttt{data/jlens/fit\_corpus\_v2.txt} (1000 WikiText seq, frozen) \\
     Probe set           & \texttt{data/jlens/probe\_set\_v2.tsv} (50/50/93, frozen) \\
-    Figures             & \texttt{figs/\{270m\_it\_full,1b\_it\_full\_v3\}/} \\
-    Probe jobs          & \texttt{25776556} (1b), \texttt{25799677} (270m) \\
+    Figures             & \texttt{figs/\{270m\_it\_full,1b\_it\_full\_v3,4b\_it\_full,arms\}/} \\
+    Probe jobs          & \texttt{25776556} (1b), \texttt{25799677} (270m), \\
+                        & \texttt{25948088--25948100} (4b, 13-way fanout) \\
     \bottomrule
   \end{tabular}
 
-  \vspace{1.2em}
-  {\footnotesize
-  Both runs logged \texttt{fit\_corpus=1000 probes=193} --- i.e.\ the current
-  frozen v2 inputs. The v1 files (\texttt{fit\_corpus.txt}, 40 seq;
+  \vspace{0.6em}
+  {\scriptsize All three runs logged \texttt{fit\_corpus=1000 probes=193} --- i.e.\ the
+  current frozen v2 inputs. The v1 files (\texttt{fit\_corpus.txt}, 40 seq;
   \texttt{probe\_set.tsv}, 30 prompts) are legacy and still present in
   \texttt{data/jlens/}; they were used only by the superseded runs.
+
+  \smallskip
+  \textbf{4b was probed one Slurm job per checkpoint} (${\sim}3.5$\,h each,
+  ${\sim}7$\,h wall clock vs.\ ${\sim}50$\,h serial), all 13 workers reusing the
+  \emph{same} fp32 $t{=}0$ lens so drift shares one baseline; per-worker rows
+  merged by \texttt{scripts/merge\_jlens\_fanout.py}, which refuses the merge if
+  any non-base step appears twice. \texttt{4b\_it\_validate\{,2\}} are the
+  earlier 5-point wrapper-validation spikes (base + steps 1--8), superseded.
 
   \smallskip
   Superseded: \texttt{1b\_it\_full\_v2} (v1 30-prompt set, no \texttt{multihop}),
   \texttt{1b\_it\_full\_probev2} (v2 inputs, immediately re-run as v3),
   \texttt{270m\_verify} (Phase-0 8-point smoke test, v1 inputs).}
+\end{frame}
+
+\begin{frame}{Data provenance --- the behavioral judge (4b)}
+  \small
+  \begin{tabular}{ll}
+    \toprule
+    Field & Value \\
+    \midrule
+    Scorer     & \texttt{gemma\_med.judge} (replaces \texttt{answer\_parsing.py}) \\
+    Provider   & \texttt{anthropic}, Message Batches API (half price) \\
+    Judge model& \texttt{claude-haiku-4-5} \; \textbf{frozen for the trajectory} \\
+    Verdicts   & \texttt{correct} / \texttt{incorrect} / \texttt{no\_answer},
+                 schema-constrained \\
+    Volume     & 83{,}384 items over 42 batches, ${\sim}11$ min, ${\sim}\$34$ \\
+    Judgments  & \texttt{eval/traj/4b\_it\_full/step-*/*\_judgments.jsonl} \\
+    Provenance & \texttt{.../step-*/judged\_summary.json} (13 files) \\
+    $t{=}0$ dir& \texttt{eval/gemma-3-4b-it-baseline/} \\
+    \bottomrule
+  \end{tabular}
+
+  \vspace{0.7em}
+  {\scriptsize
+  \textbf{\texttt{judge\_self\_disagreement} --- a quality signal that scores
+  nothing.} It counts rows where the judge's verdict string conflicts with the
+  option it actually picked: $0.2$--$0.5\%$ at the ends of the trajectory,
+  peaking at $2.8\%$ (step-64 MedMCQA, 117/4183).
+
+  \smallskip
+  \good{It changes no number.} \texttt{correct} and \texttt{answered} are both
+  recomputed from \texttt{chosen}, never from \texttt{verdict}. Of those 117
+  rows ${\sim}73\%$ are one benign shape: the model emits long ``Step 1:
+  Restating the question\ldots'' CoT and hits the generation limit before naming
+  an option, so the judge sets \texttt{chosen=none} (correct) but labels the
+  verdict \texttt{incorrect} rather than \texttt{no\_answer}. The statistic
+  tracks \textbf{how rambly the judged model is}, not how confused the judge is
+  --- which is why it peaks in the format-collapse region and subsides at both
+  ends.}
 \end{frame}
 
 \end{document}

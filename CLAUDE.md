@@ -60,10 +60,16 @@ resolves and logs the revision. Use `HF_HOME=/gpfs/data/oermannlab/users/yeb04/h
   `medgemma-27b-text-it` (the text-only endpoint we approximate).
 - **Out of scope:** `gemma-4-31B` / `-it` (different generation, no MedGemma-4).
 
-## Two environments (they conflict — keep them separate)
+## Environments (they conflict — keep them separate)
 
 - **`.venv`** — training + eval. `transformers==4.53.2`, TRL, PEFT, DeepSpeed.
   Built by `scripts/build_env.sh`; eval env `.venv-eval` (vLLM) is separate again.
+- **`.venv-judge`** — the LLM judge (`gemma_med.judge`) **only**: `anthropic` +
+  `datasets`, no torch. Built by `scripts/build_judge_env.sh`, which pins
+  Python 3.11 and `anthropic>=0.115` — on 3.8 the resolver silently caps at
+  0.72, which has no `output_config`, so the judge would lose its schema
+  constraint. Judging is a network post-process over files already on olab1, so
+  run it here, not on BigPurple.
 - **`.venv-jlens`** — the Jacobian-lens probe **only**. `jlens` requires
   `transformers>=5.5` (5.14.1, torch 2.6.0+cu124, + `wandb`), which is
   **hard-incompatible** with the training pin. Never merge these. Built by
@@ -121,11 +127,109 @@ the cached `medgemma-27b-text-it`.
 Cross-size caveat: raw `J_l` is not comparable across sizes (different hidden
 dims / tokenizers) — compare sizes only on derived scalars.
 
+## Behavioral scoring is an LLM judge, not a regex
+
+`evaluate.py` only **generates** — it writes `*_predictions.jsonl` (question,
+options, gold, response) and no score. Scoring is `gemma_med.judge`, a
+Claude-Haiku judge that returns `correct` / `incorrect` / `no_answer` per item
+into `*_judgments.jsonl`; `analyze_traj.py` reads those. `answer_parsing.py` is
+superseded and kept only to reproduce pre-judge numbers — never mix its scores
+with judge scores in one figure.
+
+Consequences to keep in mind:
+- **`no_answer` is the successor to "unparsed"**, so acc_raw / acc_answered /
+  answer_rate still separate lost knowledge from lost format compliance. Report
+  all three; acc_raw alone is not interpretable mid-trajectory.
+- **The judge matches option *content*, not the letter.** "A. <text of option
+  C>" scores as a choice of C. This is more generous than the regex was, so
+  judge numbers are not directly comparable to any figure made before the switch.
+- **The judge is told the gold answer and forbidden to re-derive it**, so the
+  metric stays benchmark accuracy rather than agreement between two models.
+- Every judgment carries both the judge's verdict and the option it picked;
+  `judge_self_disagreement` counts rows where those conflict. **It does not
+  invalidate a run.** `_record` derives *both* `correct` and `answered` from
+  `chosen`, never from `verdict`, so a mismatch changes no score — it is a
+  quality signal only. Measured on `4b_it_full` (2026-07-30): 0.2–0.5% at the
+  ends of the trajectory, peaking at 2.8% on step-64 medmcqa. Inspecting those
+  rows, ~73% are the same benign shape — the model emits long CoT that hits the
+  generation limit before naming an option, so the judge sets `chosen=none`
+  (correct) but labels the verdict `incorrect` rather than `no_answer`. It
+  tracks how rambly the *judged* model is, not how confused the judge is.
+  Investigate the rows before discarding anything; escalate only if the
+  disagreement is in `chosen`.
+- Judging is **resumable and idempotent** (keyed on item index). Price a run
+  first with `--estimate`.
+- **Three providers.** `--provider anthropic` (Claude, `ANTHROPIC_API_KEY`) is
+  the only one with a Batches API, hence the only half-price offline path;
+  `--provider moonshot` (Kimi hosted API) is sync-only, which cancels most of
+  its lower per-token price; `--provider local` is the **lab's self-hosted Kimi
+  on BigPurple** — free and rate-limit-free, but it is somebody else's Slurm job
+  and vanishes without notice. **`anthropic` is the judge of record as of
+  2026-07-30** (`claude-haiku-4-5`, `--mode batch`): ~$32 per trajectory, ~11
+  minutes wall-clock, runs on olab1. The two agree to within 1.3pp on identical
+  items (45.0 vs 46.3 acc_raw on 300 medqa rows at 4b step-1024), so the
+  freeze-the-judge rule is about reproducibility, not about either being wrong.
+  `--mode batch` on the non-batching providers is rejected, not silently
+  downgraded.
+  Hosted Kimi is reached via `api.moonshot.ai/v1`, **not** its
+  Anthropic-compatible endpoint: that one speaks OpenAI's `response_format`, not
+  Anthropic's `output_config`, so pointing the `anthropic` SDK at it would drop
+  the schema constraint without erroring.
+
+### The self-hosted Kimi server (verified 2026-07-30)
+
+`sbatch --export=ALL,TAG=<tag> scripts/judge_traj.sbatch` — ~10 judgments/s at
+`CONC=32`, so a full 40-checkpoint trajectory (~238k items) is roughly 7h and
+costs nothing. Four things about that server are not guessable and each one
+silently breaks the judge:
+
+- **The node moves.** It is somebody's Slurm job (`squeue -a | grep -i kimi`).
+  The address that worked last week is a stranger's pretraining job today, and
+  the symptom is every judgment failing to connect. `scripts/kimi_url.sh`
+  discovers it; `judge_traj.sbatch` calls that. Never hardcode a node.
+- **Only the head node answers.** A server on `sp-[0005,0008]` serves on
+  `sp-0005`; `sp-0008` refuses.
+- **Reachable from anywhere inside BigPurple** — login node and compute nodes
+  both work — but **not from olab1**. So judging runs on BigPurple. Submit it
+  (`cpu_short`, no GPU) rather than running on the login node: a full trajectory
+  is hours of wall-clock.
+- **It is a reasoning model, and the served id is not the HF name.** The lab
+  server answers to `Barney`, not `Kimi-K2.7-Code`. Left alone it burns hundreds
+  of reasoning tokens, returns `content: null`, and puts the text in a separate
+  `reasoning` field — so the obvious `.choices[0].message.content` is `None`.
+  `LocalJudge` sends `chat_template_kwargs: {"enable_thinking": false}` (115 →
+  14 completion tokens, same verdict) and keeps a generous `max_tokens` in case
+  a server build ignores it. `response_format: json_schema` *is* enforced;
+  without it the model invents its own keys.
+
+- **The judge is an instrument — freeze it.** Same discipline as the frozen fit
+  corpus and probe set: one judge model for a whole trajectory, recorded in
+  `judged_summary.json`. Two judges' scores are not comparable.
+
 ## Run commands
 
 ```bash
 # Train one arm with log-spaced checkpoints (from .venv, via Slurm)
 sbatch --gres=gpu:a100:2 --export=ALL,SIZE=1b,KIND=it,LR=1e-5 scripts/train_med.sbatch
+
+# Score a finished trajectory (from .venv-judge, on olab1; batch = half price)
+export ANTHROPIC_API_KEY=...
+python -m gemma_med.judge --root eval/traj/1b_it_full_v3 --estimate   # price it first
+python -m gemma_med.judge --root eval/traj/1b_it_full_v3             # then judge
+python -m gemma_med.judge --pred-dir eval/gemma-3-1b-it-baseline --mode sync --limit 50
+
+# Judge a whole trajectory with Claude, batch mode (~$32, ~11 min, on olab1).
+# Two passes on purpose: without --no-wait, batch mode polls each batch to
+# completion before creating the next, serialising ~42 batches behind each other.
+export ANTHROPIC_API_KEY=...          # or put it in .env (gitignored)
+python -m gemma_med.judge --root eval/traj/4b_it_full --mode batch --no-wait  # submit all
+python -m gemma_med.judge --root eval/traj/4b_it_full --mode batch           # collect
+python -m gemma_med.judge --root eval/traj/4b_it_full --mode sync            # sweep stragglers
+
+# Judge with the lab's self-hosted Kimi (free; BigPurple compute node only)
+scripts/kimi_url.sh                 # which node is serving right now
+sbatch --export=ALL,TAG=1b_it_full_v3 scripts/judge_traj.sbatch
+sbatch --export=ALL,TAG=1b_it_full_v3,LIMIT=50 scripts/judge_traj.sbatch   # smoke test
 
 # Probe a finished run's trajectory (from .venv-jlens, detached)
 sbatch --export=ALL,SIZE=1b,KIND=it,RUN_DIR=outputs/1b/full_lr1e-5_<jobid> \
