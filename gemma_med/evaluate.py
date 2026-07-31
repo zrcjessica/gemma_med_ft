@@ -3,13 +3,19 @@
 Runs in the `.venv-eval` environment (vLLM pins torch and can't share the
 training env). Benchmarks and splits mirror docs/RECIPE.md so numbers are
 comparable to the report's Table 4 and to the base gemma-3-*-it baseline.
+
+This module only *generates*. Scoring is a separate post-process
+(`gemma_med.judge`, an LLM judge) over the saved `*_predictions.jsonl`, for the
+same reason the regex parser was split out before it: generations are expensive
+and scoring is not, so scoring must be re-runnable without touching the GPU.
+Each row therefore carries everything the judge needs -- question, option texts,
+gold -- rather than just the generation.
 """
 
 from __future__ import annotations
 
 import argparse
 import json
-import re
 from pathlib import Path
 
 from datasets import load_dataset
@@ -19,20 +25,30 @@ from .data import pubmedqa_test_ids
 
 MCQ_INSTRUCTION = "Answer the following multiple-choice question."
 # Ask for a terminal, machine-checkable answer line. Free-form CoT before it is
-# fine and expected -- we parse the last match, not the first.
+# fine and expected. The judge reads the whole response, not just this line, but
+# asking for it keeps the task identical to how the benchmarks were scored
+# before -- the prompt is part of the measurement and must not drift.
 MCQ_SUFFIX = "\n\nThink step by step, then end your reply with 'Answer: <letter>'."
 YN_SUFFIX = "\n\nThink step by step, then end your reply with 'Answer: yes', 'Answer: no', or 'Answer: maybe'."
 
+YN_OPTIONS = {"yes": "yes", "no": "no", "maybe": "maybe"}
 
-def _mcq_prompt(question: str, options: dict[str, str]) -> str:
-    lines = [f"{k}. {v}" for k, v in sorted(options.items())]
-    return f"{MCQ_INSTRUCTION}\n\n{question.strip()}\n\n" + "\n".join(lines) + MCQ_SUFFIX
+
+def build_prompt(item: dict) -> str:
+    """The exact text shown to the model under test. Frozen -- see MCQ_SUFFIX."""
+    if item["kind"] == "mcq":
+        lines = [f"{k}. {v}" for k, v in sorted(item["options"].items())]
+        return f"{MCQ_INSTRUCTION}\n\n{item['question'].strip()}\n\n" + "\n".join(lines) + MCQ_SUFFIX
+    return (
+        "Given the following abstract, answer the question with yes, no, or maybe.\n\n"
+        f"{item['context']}\n\nQuestion: {item['question'].strip()}{YN_SUFFIX}"
+    )
 
 
 def load_medqa_test():
     ds = load_dataset("GBaker/MedQA-USMLE-4-options", split="test")
     return [
-        {"prompt": _mcq_prompt(r["question"], r["options"]), "gold": r["answer_idx"], "kind": "mcq"}
+        {"question": r["question"], "options": dict(r["options"]), "gold": r["answer_idx"], "kind": "mcq"}
         for r in ds
     ]
 
@@ -44,7 +60,7 @@ def load_medmcqa_val():
         if r["cop"] is None or not 0 <= r["cop"] <= 3:
             continue
         opts = {"A": r["opa"], "B": r["opb"], "C": r["opc"], "D": r["opd"]}
-        out.append({"prompt": _mcq_prompt(r["question"], opts), "gold": "ABCD"[r["cop"]], "kind": "mcq"})
+        out.append({"question": r["question"], "options": opts, "gold": "ABCD"[r["cop"]], "kind": "mcq"})
     return out
 
 
@@ -55,12 +71,15 @@ def load_pubmedqa_test():
     for r in ds:
         if str(r["pubid"]) not in test_ids:
             continue
-        ctx = "\n".join(r["context"]["contexts"])
-        prompt = (
-            "Given the following abstract, answer the question with yes, no, or maybe.\n\n"
-            f"{ctx}\n\nQuestion: {r['question'].strip()}{YN_SUFFIX}"
+        out.append(
+            {
+                "question": r["question"],
+                "context": "\n".join(r["context"]["contexts"]),
+                "options": dict(YN_OPTIONS),
+                "gold": r["final_decision"],
+                "kind": "yn",
+            }
         )
-        out.append({"prompt": prompt, "gold": r["final_decision"], "kind": "yn"})
     return out
 
 
@@ -69,31 +88,6 @@ BENCHMARKS = {
     "medmcqa": load_medmcqa_val,
     "pubmedqa": load_pubmedqa_test,
 }
-
-# The option letter must stand alone. Without the trailing lookahead these
-# regexes happily match the first letter of the *next word*: "Answer: definitely
-# C" parsed as D, "Answer: Category B" as C, "Answer: about 5mg" as A. That
-# doesn't crash -- it silently reports a wrong accuracy. Same for yes/no, where
-# an unanchored alternation matches the "no" inside "nothing".
-# `\**` tolerates markdown bold, which instruction-tuned models emit constantly.
-_MCQ_RE = re.compile(r"answer\s*[:\-]*\s*\**\(?\s*([A-E])\s*\)?\**(?![A-Za-z])", re.I)
-_YN_RE = re.compile(r"answer\s*[:\-]*\s*\**\s*\b(yes|no|maybe)\b", re.I)
-
-
-def parse_answer(text: str, kind: str) -> str | None:
-    rx = _MCQ_RE if kind == "mcq" else _YN_RE
-    matches = rx.findall(text)
-    if matches:
-        return matches[-1].upper() if kind == "mcq" else matches[-1].lower()
-    # Fallback: a bare letter/word on the final non-empty line.
-    for line in reversed([l.strip() for l in text.strip().splitlines() if l.strip()]):
-        if kind == "mcq" and re.fullmatch(r"\(?([A-E])\)?\.?", line):
-            return re.sub(r"[^A-E]", "", line).upper()
-        if kind == "yn" and line.lower().strip(".") in {"yes", "no", "maybe"}:
-            return line.lower().strip(".")
-        break
-    return None
-
 
 def main():
     ap = argparse.ArgumentParser()
@@ -133,38 +127,36 @@ def main():
 
         prompts = [
             tok.apply_chat_template(
-                [{"role": "user", "content": it["prompt"]}], tokenize=False, add_generation_prompt=True
+                [{"role": "user", "content": build_prompt(it)}], tokenize=False, add_generation_prompt=True
             )
             for it in items
         ]
         gens = llm.generate(prompts, sampling)
 
-        correct = unparsed = 0
-        rows = []
-        for it, g in zip(items, gens):
-            text = g.outputs[0].text
-            pred = parse_answer(text, it["kind"])
-            if pred is None:
-                unparsed += 1
-            ok = pred == it["gold"]
-            correct += ok
-            rows.append({"gold": it["gold"], "pred": pred, "correct": ok, "output": text})
-
-        acc = 100.0 * correct / len(items)
-        results[name] = {
-            "accuracy": round(acc, 2),
-            "n": len(items),
-            "unparsed": unparsed,
-            "unparsed_pct": round(100.0 * unparsed / len(items), 2),
-        }
+        # `idx` is the item's position in the benchmark and is the join key the
+        # judge uses. It is written explicitly rather than left implicit in line
+        # order so a partially-rewritten file can still be joined safely.
         with open(out_path / f"{name}_predictions.jsonl", "w") as f:
-            for r in rows:
-                f.write(json.dumps(r) + "\n")
-        # A high unparsed rate means the accuracy number is measuring format
-        # compliance, not medical knowledge. Surface it next to the score.
-        print(f"{name:<10} acc={acc:5.2f}  n={len(items):<6} unparsed={unparsed} ({results[name]['unparsed_pct']}%)")
+            for i, (it, g) in enumerate(zip(items, gens)):
+                row = {
+                    "idx": i,
+                    "kind": it["kind"],
+                    "gold": it["gold"],
+                    "question": it["question"],
+                    "options": it["options"],
+                    "output": g.outputs[0].text,
+                }
+                f.write(json.dumps(row) + "\n")
 
-    summary = {"model": args.model_path, "label": args.label or Path(args.model_path).name, "results": results}
+        results[name] = {"n": len(items)}
+        print(f"{name:<10} generated n={len(items)}  (unscored -- run gemma_med.judge)")
+
+    summary = {
+        "model": args.model_path,
+        "label": args.label or Path(args.model_path).name,
+        "scored": False,
+        "results": results,
+    }
     (out_path / "summary.json").write_text(json.dumps(summary, indent=2))
     print(json.dumps(summary, indent=2))
 

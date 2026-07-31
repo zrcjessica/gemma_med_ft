@@ -1,14 +1,13 @@
-"""Tests for benchmark answer parsing.
+"""Tests for the superseded regex answer parser.
 
-A parser bug here doesn't crash -- it just silently reports a wrong accuracy,
-which is the worst failure mode in the repo. The CoT cases matter most: the
-model reasons about several options before committing, so we must take the LAST
-answer, not the first.
+Scoring now goes through gemma_med.judge; answer_parsing.py is kept only to
+reproduce pre-judge numbers. These tests pin its behaviour so that reproduction
+stays faithful -- they are not a check on the current scoring path.
 """
 
 import pytest
 
-from gemma_med.evaluate import parse_answer
+from gemma_med.answer_parsing import parse_answer
 
 
 @pytest.mark.parametrize(

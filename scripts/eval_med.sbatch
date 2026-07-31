@@ -41,8 +41,17 @@ _notify_slack() {
     summary=""
     if [[ -f "${OUT_DIR}/summary.json" ]]; then
         summary=$(python -c "
-import json;r=json.load(open('${OUT_DIR}/summary.json'))['results']
-print(' | '.join(f\"{k}: {v['accuracy']}\" for k,v in r.items()))
+import json
+# evaluate.py only generates now; scoring is gemma_med.judge, which writes
+# judged_summary.json later. Report whichever exists.
+import os
+p='${OUT_DIR}/judged_summary.json'
+if os.path.exists(p):
+    r=json.load(open(p))['results']
+    print(' | '.join(f\"{k}: {v['acc_raw']} ({v['answer_rate']}% answered)\" for k,v in r.items()))
+else:
+    r=json.load(open('${OUT_DIR}/summary.json'))['results']
+    print(' | '.join(f\"{k}: n={v['n']}\" for k,v in r.items())+' (unscored)')
 " 2>/dev/null || echo "")
     fi
     curl -s -X POST "${SLACK_WEBHOOK_URL}" \

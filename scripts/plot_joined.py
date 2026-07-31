@@ -1,10 +1,13 @@
 """Figure for the behavioral trajectory joined to the j-lens trajectory.
 
 Reads eval/traj/<tag>/joined.json (scripts/analyze_traj.py --out) and renders the
-one thing the raw benchmark numbers hide: accuracy among *parsed* answers rises
-over medical SFT while the parse rate collapses, so raw accuracy falls. Raw,
-parsed, and parse-rate are all percentages and share one y-axis -- no second
+one thing the raw benchmark numbers hide: accuracy among *answered* items rises
+over medical SFT while the answer rate collapses, so raw accuracy falls. Raw,
+answered, and answer-rate are all percentages and share one y-axis -- no second
 scale is introduced anywhere in this figure.
+
+Scores are LLM-judge verdicts (gemma_med.judge); "answered" means the judge found
+a committed choice, the successor to the old regex parse rate.
 
 Palette/style are imported from plot_trajectory so the deck stays consistent.
 """
@@ -28,8 +31,8 @@ from plot_trajectory import (  # noqa: E402
 
 BENCHMARKS = [("medqa", "MedQA"), ("medmcqa", "MedMCQA"), ("pubmedqa", "PubMedQA")]
 
-# Roles, assigned once and never cycled: the parse rate is the explanation, the
-# parsed accuracy is the real signal, the raw accuracy is the misleading number.
+# Roles, assigned once and never cycled: the answer rate is the explanation, the
+# answered accuracy is the real signal, the raw accuracy is the misleading number.
 C_PARSE = GENERAL    # slot 1 blue
 C_PARSED = MEDICAL   # slot 2 orange
 C_RAW = DRIFT        # slot 3 aqua
@@ -72,12 +75,12 @@ def plot(rows, out_pdf, out_png, suptitle):
     # --- top row: one panel per benchmark, all three series in percent ---
     for ax, (key, title) in zip(axes[0], BENCHMARKS):
         beh = [r["behavioral"][key] for r in rows]
-        parse = [b["parse_rate"] for b in beh]
-        accp = [b["acc_parsed"] for b in beh]
+        parse = [b["answer_rate"] for b in beh]
+        accp = [b["acc_answered"] for b in beh]
         accr = [b["acc_raw"] for b in beh]
         _baseline(ax, accp[0], C_PARSED)
-        _series(ax, x, parse, C_PARSE, "o", "parse rate")
-        _series(ax, x, accp, C_PARSED, "s", "accuracy (parsed only)")
+        _series(ax, x, parse, C_PARSE, "o", "answer rate")
+        _series(ax, x, accp, C_PARSED, "s", "accuracy (answered only)")
         _series(ax, x, accr, C_RAW, "^", "accuracy (raw)")
         ax.set_ylim(0, 104)
         ax.set_title(title, loc="left", color=INK)
@@ -89,7 +92,7 @@ def plot(rows, out_pdf, out_png, suptitle):
                     xytext=(5, -9), fontsize=8, color=MUTED)
     axes[0][0].set_ylabel("percent")
     axes[0][2].legend(loc="lower left", fontsize=8.5)
-    axes[0][0].text(0, 4, "dashed = base (t=0) parsed accuracy",
+    axes[0][0].text(0, 4, "dashed = base (t=0) answered accuracy",
                     fontsize=7.5, color=MEDICAL, alpha=0.85)
 
     # --- bottom row: the lens side, one measure per panel (never co-plotted) ---
@@ -117,14 +120,14 @@ def plot(rows, out_pdf, out_png, suptitle):
     style_x(a_kl, steps, x)
 
     # scatter: the relationship the trajectory panels only imply
-    pr = [r["behavioral"]["medmcqa"]["parse_rate"] for r in rows]
+    pr = [r["behavioral"]["medmcqa"]["answer_rate"] for r in rows]
     a_sc.scatter(klg, pr, s=46, facecolor="white", edgecolor=C_PARSE, linewidth=1.8, zorder=3)
     for xi, yi, s in zip(klg, pr, steps):
         if s in (0, 32, 512, 4882):
             a_sc.annotate("t=0" if s == 0 else str(s), (xi, yi), textcoords="offset points",
                           xytext=(6, 4), fontsize=7.5, color=MUTED)
     a_sc.set_xlabel("KL(model ‖ lens), general cue (nats, layer mean)")
-    a_sc.set_ylabel("MedMCQA parse rate (%)")
+    a_sc.set_ylabel("MedMCQA answer rate (%)")
     a_sc.set_title(f"Faithfulness vs. format compliance  (r = {pearson(klg, pr):+.2f}, n={len(rows)})",
                    loc="left", color=INK)
     a_sc.grid(alpha=0.7)

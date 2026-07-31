@@ -2,14 +2,19 @@
 
 Raw accuracy conflates two things once SFT pulls an -it model off its
 instruction format: whether the model knows the answer, and whether it still
-emits a parseable one. Unparsed responses score as wrong, so a collapsing
-format looks identical to collapsing knowledge. This splits them:
+gives one. Unanswered responses score as wrong, so a collapsing format looks
+identical to collapsing knowledge. This splits them:
 
-  acc_raw      -- unparsed counted wrong (what evaluate.py reports)
-  acc_parsed   -- accuracy among responses that parsed (medical signal)
-  parse_rate   -- fraction that parsed (format compliance)
+  acc_raw       -- no_answer counted wrong
+  acc_answered  -- accuracy among responses that chose an option (medical signal)
+  answer_rate   -- fraction that chose an option (format compliance)
 
 Both belong in any figure; acc_raw alone is not interpretable mid-trajectory.
+
+Scores come from `*_judgments.jsonl` (gemma_med.judge), not from a regex over
+the generations. Judge a trajectory before analysing it:
+
+    python -m gemma_med.judge --root eval/traj/<tag>
 """
 
 from __future__ import annotations
@@ -17,6 +22,7 @@ from __future__ import annotations
 import argparse
 import json
 import re
+import sys
 from pathlib import Path
 
 BENCHMARKS = ("medqa", "medmcqa", "pubmedqa")
@@ -27,27 +33,31 @@ def load_behavioral(traj_dir: Path, baseline: Path | None):
     dirs = [(int(re.search(r"step-(\d+)", str(d)).group(1)), d) for d in traj_dir.glob("step-*")]
     if baseline:
         dirs.append((0, baseline))
+    missing = []
     for step, d in sorted(dirs):
         row = {}
         for b in BENCHMARKS:
-            pred = d / f"{b}_predictions.jsonl"
-            if not pred.exists():
+            jpath = d / f"{b}_judgments.jsonl"
+            if not jpath.exists():
+                if (d / f"{b}_predictions.jsonl").exists():
+                    missing.append(f"{d.name}/{b}")
                 continue
-            n = n_parsed = n_correct = 0
-            for line in open(pred):
-                r = json.loads(line)
-                n += 1
-                if r["pred"] is not None:
-                    n_parsed += 1
-                    n_correct += r["correct"]
+            # Deduplicate by idx: a resumed judge run appends, so a retried item
+            # can appear twice. Last write wins, matching gemma_med.judge.
+            recs = {r["idx"]: r for r in (json.loads(l) for l in open(jpath))}
+            n = len(recs)
+            n_ans = sum(1 for r in recs.values() if r["answered"])
+            n_correct = sum(1 for r in recs.values() if r["correct"])
             row[b] = {
                 "n": n,
                 "acc_raw": 100.0 * n_correct / n,
-                "acc_parsed": 100.0 * n_correct / n_parsed if n_parsed else float("nan"),
-                "parse_rate": 100.0 * n_parsed / n,
+                "acc_answered": 100.0 * n_correct / n_ans if n_ans else float("nan"),
+                "answer_rate": 100.0 * n_ans / n,
             }
         if row:
             steps[step] = row
+    if missing:
+        print(f"warning: unjudged (run gemma_med.judge): {', '.join(missing)}", file=sys.stderr)
     return steps
 
 
@@ -91,7 +101,7 @@ def main():
 
     hdr = f"{'step':>6} {'drift':>7} {'KLgen':>7} {'KLmed':>7} |"  # KL = layer mean
     for b in BENCHMARKS:
-        hdr += f" {b[:7]:>7} {'parsed':>7} {'parse%':>7} |"
+        hdr += f" {b[:7]:>7} {'answrd':>7} {'ans%':>7} |"
     print(hdr)
     print("-" * len(hdr))
 
@@ -106,7 +116,7 @@ def main():
         for b in BENCHMARKS:
             v = beh[step].get(b)
             line += (
-                f" {v['acc_raw']:>7.2f} {v['acc_parsed']:>7.2f} {v['parse_rate']:>7.1f} |"
+                f" {v['acc_raw']:>7.2f} {v['acc_answered']:>7.2f} {v['answer_rate']:>7.1f} |"
                 if v else " " * 25 + "|"
             )
         print(line)
@@ -133,8 +143,8 @@ def main():
             d = [j["lens"]["drift_relfro_max"] for j in rows]
             print(
                 f"pearson(drift, {b:<9}) acc_raw={corr(d, [j['behavioral'][b]['acc_raw'] for j in rows]):+.3f}"
-                f"  acc_parsed={corr(d, [j['behavioral'][b]['acc_parsed'] for j in rows]):+.3f}"
-                f"  parse_rate={corr(d, [j['behavioral'][b]['parse_rate'] for j in rows]):+.3f}"
+                f"  acc_answered={corr(d, [j['behavioral'][b]['acc_answered'] for j in rows]):+.3f}"
+                f"  answer_rate={corr(d, [j['behavioral'][b]['answer_rate'] for j in rows]):+.3f}"
             )
 
     if args.out:
