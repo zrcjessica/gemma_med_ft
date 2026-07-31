@@ -13,10 +13,16 @@
 #   sbatch --gres=gpu:a100:4 --export=ALL,SIZE=4b,LR=1e-5 scripts/train_med.sbatch
 #   sbatch --gres=gpu:a100:8 --export=ALL,SIZE=27b,LORA=1 scripts/train_med.sbatch
 #
+# 27b FULL FT needs an 8x80GB node plus optimizer offload, so it also needs a
+# much larger --mem and CPU count than the defaults above (see OFFLOAD_OPTIM):
+#   sbatch --partition=superpod --gres=gpu:h100:8 --mem=900G --cpus-per-task=64 \
+#       --export=ALL,SIZE=27b,KIND=it,LORA=0,OMP_NUM_THREADS=8 scripts/train_med.sbatch
+#
 # Env vars:
 #   SIZE      270m | 1b | 4b | 12b | 27b     (required)
 #   LR        learning rate                   (default 1e-5)
 #   LORA      1 to use LoRA instead of full FT (default: on for 12b/27b)
+#   OFFLOAD_OPTIM  1 to offload Adam state to host RAM (default: on for 27b full FT)
 #   DATA_DIR  prebuilt mixture                (default: data/mix_default)
 #   VARIANT   run-name suffix                 (default: full or lora)
 #   EPOCHS, MAX_SEQ_LEN, PER_DEV_BS, GRAD_ACC, MAX_TRAIN_SAMPLES
@@ -116,7 +122,11 @@ export PATH=${CUDA_HOME}/bin:${PATH}
 
 export HF_HOME=${HF_HOME:-/gpfs/data/oermannlab/users/zhouj14/hf}
 export HF_HUB_OFFLINE=1          # data + weights are prestaged; don't hit the hub mid-run
-export OMP_NUM_THREADS=${SLURM_CPUS_PER_TASK:-16}
+# Respect an explicit override: SLURM_CPUS_PER_TASK is the whole task's CPU
+# allocation, but under accelerate every rank inherits this value, so on a
+# multi-GPU node the naive setting oversubscribes by NUM_GPUS (64 CPUs x 8 ranks
+# = 512 threads on 224 cores). Pass OMP_NUM_THREADS=<cpus/ranks> for those runs.
+export OMP_NUM_THREADS=${OMP_NUM_THREADS:-${SLURM_CPUS_PER_TASK:-16}}
 export TOKENIZERS_PARALLELISM=false
 # Gemma 3's 262k vocab makes the fp32 logits upcast in the loss the single
 # largest allocation (PER_DEV_BS x seq x 262144 x 4B -- 16GiB at bs=8/seq2048).
@@ -185,14 +195,57 @@ EXTRA=(--attn "${ATTN:-eager}")
 
 LAUNCH=(python -m gemma_med.train)
 if [[ "${NUM_GPUS}" -gt 1 ]]; then
-    # --zero3_save_16bit_model is REQUIRED, not optional: without it ZeRO-3 leaves
-    # each checkpoint as sharded DeepSpeed state under global_step*/ with no
-    # model.safetensors at all, and the jlens probe (which loads HF format) can't
-    # read them. Phase 0 only escaped this because 270m ran single-GPU.
-    LAUNCH=(accelerate launch --num_processes "${NUM_GPUS}" --mixed_precision bf16
-            --use_deepspeed --zero_stage 3 --gradient_clipping 1.0
-            --zero3_save_16bit_model true
-            -m gemma_med.train)
+    # 27b full FT OOMs on 8x80GB even under ZeRO-3 (job 25969532, OOM in the
+    # first backward: 72.5GiB allocated of 79.11GiB). Sharded persistent state is
+    # only ~55GB/GPU; what doesn't fit is what ZeRO-3 needs on TOP of it -- the
+    # all-gathered lm_head (262144 x 5376 x 2B = 2.8GB, plus its grad) and the
+    # fp32 logits upcast at Gemma's 262k vocab. Offloading Adam's fp32 states
+    # (master + m + v, ~330GB total) to host RAM drops the persistent footprint
+    # to ~14GB/GPU and leaves the transients room. The cost is amortized: the
+    # optimizer step runs once per GRAD_ACC micro-batches, not per micro-batch.
+    #
+    # Requires a much larger --mem than the 200G default (the offloaded state
+    # lives in the job's cgroup) and more CPUs for the optimizer step. Submit
+    # 27b full FT with: --mem=900G --cpus-per-task=64 OMP_NUM_THREADS=8
+    if [[ -z "${OFFLOAD_OPTIM:-}" ]]; then
+        if [[ "${SIZE}" == "27b" && "${LORA}" == "0" ]]; then OFFLOAD_OPTIM=1
+        else OFFLOAD_OPTIM=0; fi
+    fi
+    echo "DeepSpeed: zero3 offload_optimizer=${OFFLOAD_OPTIM}"
+
+    if [[ "${OFFLOAD_OPTIM}" == "1" ]]; then
+        # Offload goes through a JSON config rather than --offload_optimizer_device
+        # because it needs one key the CLI cannot set: zero_force_ds_cpu_optimizer.
+        # Left at its default (true), accelerate swaps the torch AdamW for
+        # DeepSpeedCPUAdam -- a C++ extension JIT-compiled on first use, which is
+        # impossible here. superpod compute nodes run a stripped image with no
+        # glibc-devel: /usr/lib64/crti.o is absent, so `ld` cannot link any shared
+        # object and the build dies (jobs 25969768, 25969837 -- the second even
+        # after the 8-rank build race was removed, so it is the toolchain, not a
+        # race). Setting it false keeps torch's own AdamW, which needs no
+        # compilation. Slower per optimizer step, but that step runs once per
+        # GRAD_ACC micro-batches.
+        #
+        # NOTE: a config file supersedes the --zero_stage / --gradient_clipping /
+        # --zero3_save_16bit_model CLI flags, so the JSON must carry all of them.
+        # In particular stage3_gather_16bit_weights_on_model_save is the config
+        # spelling of --zero3_save_16bit_model, and is just as REQUIRED (see below).
+        DS_CFG=${DS_CFG:-${REPO_ROOT}/configs/ds_zero3_offload.json}
+        [[ -f "${DS_CFG}" ]] || { echo "ERROR: missing DeepSpeed config ${DS_CFG}" >&2; exit 1; }
+        echo "DeepSpeed config: ${DS_CFG}"
+        LAUNCH=(accelerate launch --num_processes "${NUM_GPUS}" --mixed_precision bf16
+                --use_deepspeed --deepspeed_config_file "${DS_CFG}"
+                -m gemma_med.train)
+    else
+        # --zero3_save_16bit_model is REQUIRED, not optional: without it ZeRO-3 leaves
+        # each checkpoint as sharded DeepSpeed state under global_step*/ with no
+        # model.safetensors at all, and the jlens probe (which loads HF format) can't
+        # read them. Phase 0 only escaped this because 270m ran single-GPU.
+        LAUNCH=(accelerate launch --num_processes "${NUM_GPUS}" --mixed_precision bf16
+                --use_deepspeed --zero_stage 3 --gradient_clipping 1.0
+                --zero3_save_16bit_model true
+                -m gemma_med.train)
+    fi
 fi
 
 "${LAUNCH[@]}" \
