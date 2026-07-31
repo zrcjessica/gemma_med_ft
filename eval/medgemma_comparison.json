@@ -1,0 +1,246 @@
+{
+  "judge": [
+    "anthropic/claude-haiku-4-5"
+  ],
+  "reference": "eval/medgemma-4b-it",
+  "models": [
+    {
+      "label": "gemma-3-270m-it (base)",
+      "dir": "eval/gemma-3-270m-it-baseline",
+      "group": "270m",
+      "benchmarks": {
+        "medqa": {
+          "n": 1273,
+          "n_expected": 1273,
+          "acc_raw": 23.17,
+          "acc_answered": 25.47,
+          "answer_rate": 90.97,
+          "judge_self_disagreement": 2,
+          "judge_self_disagreement_pct": 0.16
+        },
+        "medmcqa": {
+          "n": 4183,
+          "n_expected": 4183,
+          "acc_raw": 18.03,
+          "acc_answered": 40.43,
+          "answer_rate": 44.59,
+          "judge_self_disagreement": 14,
+          "judge_self_disagreement_pct": 0.33
+        },
+        "pubmedqa": {
+          "n": 500,
+          "n_expected": 500,
+          "acc_raw": 6.2,
+          "acc_answered": 60.78,
+          "answer_rate": 10.2,
+          "judge_self_disagreement": 0,
+          "judge_self_disagreement_pct": 0.0
+        }
+      }
+    },
+    {
+      "label": "+ medical SFT",
+      "dir": "eval/traj/270m_it_full/step-4882",
+      "group": "270m",
+      "benchmarks": {
+        "medqa": {
+          "n": 1273,
+          "n_expected": 1273,
+          "acc_raw": 18.38,
+          "acc_answered": 27.86,
+          "answer_rate": 65.99,
+          "judge_self_disagreement": 0,
+          "judge_self_disagreement_pct": 0.0
+        },
+        "medmcqa": {
+          "n": 4183,
+          "n_expected": 4183,
+          "acc_raw": 18.77,
+          "acc_answered": 28.46,
+          "answer_rate": 65.93,
+          "judge_self_disagreement": 17,
+          "judge_self_disagreement_pct": 0.41
+        },
+        "pubmedqa": {
+          "n": 500,
+          "n_expected": 500,
+          "acc_raw": 24.4,
+          "acc_answered": 83.56,
+          "answer_rate": 29.2,
+          "judge_self_disagreement": 0,
+          "judge_self_disagreement_pct": 0.0
+        }
+      }
+    },
+    {
+      "label": "gemma-3-1b-it (base)",
+      "dir": "eval/gemma-3-1b-it-baseline",
+      "group": "1b",
+      "benchmarks": {
+        "medqa": {
+          "n": 1273,
+          "n_expected": 1273,
+          "acc_raw": 31.97,
+          "acc_answered": 32.05,
+          "answer_rate": 99.76,
+          "judge_self_disagreement": 2,
+          "judge_self_disagreement_pct": 0.16
+        },
+        "medmcqa": {
+          "n": 4183,
+          "n_expected": 4183,
+          "acc_raw": 32.66,
+          "acc_answered": 32.72,
+          "answer_rate": 99.81,
+          "judge_self_disagreement": 19,
+          "judge_self_disagreement_pct": 0.45
+        },
+        "pubmedqa": {
+          "n": 500,
+          "n_expected": 500,
+          "acc_raw": 52.6,
+          "acc_answered": 52.6,
+          "answer_rate": 100.0,
+          "judge_self_disagreement": 2,
+          "judge_self_disagreement_pct": 0.4
+        }
+      }
+    },
+    {
+      "label": "+ medical SFT",
+      "dir": "eval/traj/1b_it_full_v3/step-4882",
+      "group": "1b",
+      "benchmarks": {
+        "medqa": {
+          "n": 1273,
+          "n_expected": 1273,
+          "acc_raw": 30.64,
+          "acc_answered": 33.42,
+          "answer_rate": 91.67,
+          "judge_self_disagreement": 3,
+          "judge_self_disagreement_pct": 0.24
+        },
+        "medmcqa": {
+          "n": 4183,
+          "n_expected": 4183,
+          "acc_raw": 34.57,
+          "acc_answered": 37.82,
+          "answer_rate": 91.39,
+          "judge_self_disagreement": 42,
+          "judge_self_disagreement_pct": 1.0
+        },
+        "pubmedqa": {
+          "n": 500,
+          "n_expected": 500,
+          "acc_raw": 57.0,
+          "acc_answered": 58.16,
+          "answer_rate": 98.0,
+          "judge_self_disagreement": 1,
+          "judge_self_disagreement_pct": 0.2
+        }
+      }
+    },
+    {
+      "label": "gemma-3-4b-it (base)",
+      "dir": "eval/gemma-3-4b-it-baseline",
+      "group": "4b",
+      "benchmarks": {
+        "medqa": {
+          "n": 1273,
+          "n_expected": 1273,
+          "acc_raw": 52.87,
+          "acc_answered": 53.12,
+          "answer_rate": 99.53,
+          "judge_self_disagreement": 2,
+          "judge_self_disagreement_pct": 0.16
+        },
+        "medmcqa": {
+          "n": 4183,
+          "n_expected": 4183,
+          "acc_raw": 46.64,
+          "acc_answered": 46.79,
+          "answer_rate": 99.69,
+          "judge_self_disagreement": 12,
+          "judge_self_disagreement_pct": 0.29
+        },
+        "pubmedqa": {
+          "n": 500,
+          "n_expected": 500,
+          "acc_raw": 58.2,
+          "acc_answered": 58.2,
+          "answer_rate": 100.0,
+          "judge_self_disagreement": 0,
+          "judge_self_disagreement_pct": 0.0
+        }
+      }
+    },
+    {
+      "label": "+ medical SFT",
+      "dir": "eval/traj/4b_it_full/step-4882",
+      "group": "4b",
+      "benchmarks": {
+        "medqa": {
+          "n": 1273,
+          "n_expected": 1273,
+          "acc_raw": 56.4,
+          "acc_answered": 58.42,
+          "answer_rate": 96.54,
+          "judge_self_disagreement": 3,
+          "judge_self_disagreement_pct": 0.24
+        },
+        "medmcqa": {
+          "n": 4183,
+          "n_expected": 4183,
+          "acc_raw": 50.82,
+          "acc_answered": 55.13,
+          "answer_rate": 92.18,
+          "judge_self_disagreement": 59,
+          "judge_self_disagreement_pct": 1.41
+        },
+        "pubmedqa": {
+          "n": 500,
+          "n_expected": 500,
+          "acc_raw": 72.4,
+          "acc_answered": 72.84,
+          "answer_rate": 99.4,
+          "judge_self_disagreement": 1,
+          "judge_self_disagreement_pct": 0.2
+        }
+      }
+    },
+    {
+      "label": "MedGemma-4b-it",
+      "dir": "eval/medgemma-4b-it",
+      "group": "ref",
+      "benchmarks": {
+        "medqa": {
+          "n": 1273,
+          "n_expected": 1273,
+          "acc_raw": 66.3,
+          "acc_answered": 66.56,
+          "answer_rate": 99.61,
+          "judge_self_disagreement": 5,
+          "judge_self_disagreement_pct": 0.39
+        },
+        "medmcqa": {
+          "n": 4183,
+          "n_expected": 4183,
+          "acc_raw": 55.92,
+          "acc_answered": 56.14,
+          "answer_rate": 99.59,
+          "judge_self_disagreement": 22,
+          "judge_self_disagreement_pct": 0.53
+        },
+        "pubmedqa": {
+          "n": 500,
+          "n_expected": 500,
+          "acc_raw": 66.2,
+          "acc_answered": 66.2,
+          "answer_rate": 100.0,
+          "judge_self_disagreement": 2,
+          "judge_self_disagreement_pct": 0.4
+        }
+      }
+    }
+  ]
+}

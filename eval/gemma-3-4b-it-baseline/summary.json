@@ -1,0 +1,24 @@
+{
+  "model": "/gpfs/data/oermannlab/users/zhouj14/gemma_med_ft/data/text_bases/4b_it",
+  "label": "gemma-3-4b-it-baseline",
+  "results": {
+    "medqa": {
+      "accuracy": 52.79,
+      "n": 1273,
+      "unparsed": 6,
+      "unparsed_pct": 0.47
+    },
+    "medmcqa": {
+      "accuracy": 46.45,
+      "n": 4183,
+      "unparsed": 17,
+      "unparsed_pct": 0.41
+    },
+    "pubmedqa": {
+      "accuracy": 58.2,
+      "n": 500,
+      "unparsed": 0,
+      "unparsed_pct": 0.0
+    }
+  }
+}
