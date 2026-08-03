@@ -102,6 +102,12 @@ cd "${REPO_ROOT}"
 source .venv-eval/bin/activate
 export PYTHONUNBUFFERED=1
 export VLLM_WORKER_MULTIPROC_METHOD=spawn
+# Array tasks land on the same node, and vLLM's torch-compile cache is a single
+# shared directory: concurrent tasks race writing it and all but one die with
+# "vLLM failed to compile the model ... corrupted compilation artifact". Killed
+# 3 of 4 on the first submission. One cache root per task.
+export VLLM_CACHE_ROOT="${HOME}/.cache/vllm/${SLURM_ARRAY_JOB_ID:-$SLURM_JOB_ID}_${IDX}"
+export TORCHINDUCTOR_CACHE_DIR="${VLLM_CACHE_ROOT}/inductor"
 
 python -m gemma_med.evaluate \
     --model-path "${CKPT}" \

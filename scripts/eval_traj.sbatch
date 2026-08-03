@@ -90,6 +90,10 @@ cd "${REPO_ROOT}"
 source .venv-eval/bin/activate
 export PYTHONUNBUFFERED=1
 export VLLM_WORKER_MULTIPROC_METHOD=spawn
+# Per-task torch-compile cache: co-scheduled array tasks otherwise race on the
+# one shared cache dir and die with "corrupted compilation artifact".
+export VLLM_CACHE_ROOT="${HOME}/.cache/vllm/${SLURM_ARRAY_JOB_ID:-$SLURM_JOB_ID}_${IDX}"
+export TORCHINDUCTOR_CACHE_DIR="${VLLM_CACHE_ROOT}/inductor"
 # Benchmarks are pulled from the hub, so we do NOT set HF_HUB_OFFLINE here.
 
 python -m gemma_med.evaluate \
