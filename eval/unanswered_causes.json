@@ -1,0 +1,1028 @@
+[
+  {
+    "dir": "eval/gemma-3-270m-it-baseline",
+    "bench": "medqa",
+    "n": 1273,
+    "unanswered": 115,
+    "at_cap": 3,
+    "at_cap_but_answered": 1,
+    "buckets": {
+      "loop": 2,
+      "long_cot": 0,
+      "placeholder": 1,
+      "no_choice": 110,
+      "judge_miss": 2,
+      "empty": 0
+    },
+    "loop_onset_words_p50": 165,
+    "loop_onset_words_p90": 165
+  },
+  {
+    "dir": "eval/gemma-3-270m-it-baseline",
+    "bench": "medmcqa",
+    "n": 4183,
+    "unanswered": 2318,
+    "at_cap": 7,
+    "at_cap_but_answered": 2,
+    "buckets": {
+      "loop": 3,
+      "long_cot": 2,
+      "placeholder": 6,
+      "no_choice": 2297,
+      "judge_miss": 10,
+      "empty": 0
+    },
+    "loop_onset_words_p50": 55,
+    "loop_onset_words_p90": 92
+  },
+  {
+    "dir": "eval/gemma-3-270m-it-baseline",
+    "bench": "pubmedqa",
+    "n": 500,
+    "unanswered": 449,
+    "at_cap": 11,
+    "at_cap_but_answered": 2,
+    "buckets": {
+      "loop": 9,
+      "long_cot": 0,
+      "placeholder": 0,
+      "no_choice": 440,
+      "judge_miss": 0,
+      "empty": 0
+    },
+    "loop_onset_words_p50": 20,
+    "loop_onset_words_p90": 63
+  },
+  {
+    "dir": "eval/gemma-3-1b-it-baseline",
+    "bench": "medqa",
+    "n": 1273,
+    "unanswered": 3,
+    "at_cap": 0,
+    "at_cap_but_answered": 0,
+    "buckets": {
+      "loop": 0,
+      "long_cot": 0,
+      "placeholder": 0,
+      "no_choice": 1,
+      "judge_miss": 2,
+      "empty": 0
+    },
+    "loop_onset_words_p50": 0,
+    "loop_onset_words_p90": 0
+  },
+  {
+    "dir": "eval/gemma-3-1b-it-baseline",
+    "bench": "medmcqa",
+    "n": 4183,
+    "unanswered": 8,
+    "at_cap": 5,
+    "at_cap_but_answered": 0,
+    "buckets": {
+      "loop": 3,
+      "long_cot": 2,
+      "placeholder": 0,
+      "no_choice": 2,
+      "judge_miss": 1,
+      "empty": 0
+    },
+    "loop_onset_words_p50": 54,
+    "loop_onset_words_p90": 101
+  },
+  {
+    "dir": "eval/gemma-3-1b-it-baseline",
+    "bench": "pubmedqa",
+    "n": 500,
+    "unanswered": 0,
+    "at_cap": 0,
+    "at_cap_but_answered": 0,
+    "buckets": {
+      "loop": 0,
+      "long_cot": 0,
+      "placeholder": 0,
+      "no_choice": 0,
+      "judge_miss": 0,
+      "empty": 0
+    },
+    "loop_onset_words_p50": 0,
+    "loop_onset_words_p90": 0
+  },
+  {
+    "dir": "eval/gemma-3-4b-it-baseline",
+    "bench": "medqa",
+    "n": 1273,
+    "unanswered": 6,
+    "at_cap": 6,
+    "at_cap_but_answered": 0,
+    "buckets": {
+      "loop": 0,
+      "long_cot": 6,
+      "placeholder": 0,
+      "no_choice": 0,
+      "judge_miss": 0,
+      "empty": 0
+    },
+    "loop_onset_words_p50": 0,
+    "loop_onset_words_p90": 0
+  },
+  {
+    "dir": "eval/gemma-3-4b-it-baseline",
+    "bench": "medmcqa",
+    "n": 4183,
+    "unanswered": 13,
+    "at_cap": 9,
+    "at_cap_but_answered": 3,
+    "buckets": {
+      "loop": 0,
+      "long_cot": 6,
+      "placeholder": 0,
+      "no_choice": 6,
+      "judge_miss": 1,
+      "empty": 0
+    },
+    "loop_onset_words_p50": 0,
+    "loop_onset_words_p90": 0
+  },
+  {
+    "dir": "eval/gemma-3-4b-it-baseline",
+    "bench": "pubmedqa",
+    "n": 500,
+    "unanswered": 0,
+    "at_cap": 0,
+    "at_cap_but_answered": 0,
+    "buckets": {
+      "loop": 0,
+      "long_cot": 0,
+      "placeholder": 0,
+      "no_choice": 0,
+      "judge_miss": 0,
+      "empty": 0
+    },
+    "loop_onset_words_p50": 0,
+    "loop_onset_words_p90": 0
+  },
+  {
+    "dir": "eval/medgemma-4b-it",
+    "bench": "medqa",
+    "n": 1273,
+    "unanswered": 5,
+    "at_cap": 5,
+    "at_cap_but_answered": 1,
+    "buckets": {
+      "loop": 4,
+      "long_cot": 0,
+      "placeholder": 0,
+      "no_choice": 0,
+      "judge_miss": 1,
+      "empty": 0
+    },
+    "loop_onset_words_p50": 85,
+    "loop_onset_words_p90": 91
+  },
+  {
+    "dir": "eval/medgemma-4b-it",
+    "bench": "medmcqa",
+    "n": 4183,
+    "unanswered": 17,
+    "at_cap": 18,
+    "at_cap_but_answered": 2,
+    "buckets": {
+      "loop": 14,
+      "long_cot": 2,
+      "placeholder": 0,
+      "no_choice": 0,
+      "judge_miss": 1,
+      "empty": 0
+    },
+    "loop_onset_words_p50": 27,
+    "loop_onset_words_p90": 77
+  },
+  {
+    "dir": "eval/medgemma-4b-it",
+    "bench": "pubmedqa",
+    "n": 500,
+    "unanswered": 0,
+    "at_cap": 0,
+    "at_cap_but_answered": 0,
+    "buckets": {
+      "loop": 0,
+      "long_cot": 0,
+      "placeholder": 0,
+      "no_choice": 0,
+      "judge_miss": 0,
+      "empty": 0
+    },
+    "loop_onset_words_p50": 0,
+    "loop_onset_words_p90": 0
+  },
+  {
+    "dir": "eval/traj/4b_it_full/step-2",
+    "bench": "medqa",
+    "n": 1273,
+    "unanswered": 5,
+    "at_cap": 6,
+    "at_cap_but_answered": 2,
+    "buckets": {
+      "loop": 0,
+      "long_cot": 4,
+      "placeholder": 0,
+      "no_choice": 0,
+      "judge_miss": 1,
+      "empty": 0
+    },
+    "loop_onset_words_p50": 0,
+    "loop_onset_words_p90": 0
+  },
+  {
+    "dir": "eval/traj/4b_it_full/step-2",
+    "bench": "medmcqa",
+    "n": 4183,
+    "unanswered": 18,
+    "at_cap": 10,
+    "at_cap_but_answered": 1,
+    "buckets": {
+      "loop": 1,
+      "long_cot": 8,
+      "placeholder": 0,
+      "no_choice": 6,
+      "judge_miss": 3,
+      "empty": 0
+    },
+    "loop_onset_words_p50": 189,
+    "loop_onset_words_p90": 189
+  },
+  {
+    "dir": "eval/traj/4b_it_full/step-2",
+    "bench": "pubmedqa",
+    "n": 500,
+    "unanswered": 0,
+    "at_cap": 0,
+    "at_cap_but_answered": 0,
+    "buckets": {
+      "loop": 0,
+      "long_cot": 0,
+      "placeholder": 0,
+      "no_choice": 0,
+      "judge_miss": 0,
+      "empty": 0
+    },
+    "loop_onset_words_p50": 0,
+    "loop_onset_words_p90": 0
+  },
+  {
+    "dir": "eval/traj/4b_it_full/step-4",
+    "bench": "medqa",
+    "n": 1273,
+    "unanswered": 2,
+    "at_cap": 2,
+    "at_cap_but_answered": 0,
+    "buckets": {
+      "loop": 0,
+      "long_cot": 2,
+      "placeholder": 0,
+      "no_choice": 0,
+      "judge_miss": 0,
+      "empty": 0
+    },
+    "loop_onset_words_p50": 0,
+    "loop_onset_words_p90": 0
+  },
+  {
+    "dir": "eval/traj/4b_it_full/step-4",
+    "bench": "medmcqa",
+    "n": 4183,
+    "unanswered": 11,
+    "at_cap": 4,
+    "at_cap_but_answered": 1,
+    "buckets": {
+      "loop": 0,
+      "long_cot": 3,
+      "placeholder": 0,
+      "no_choice": 7,
+      "judge_miss": 1,
+      "empty": 0
+    },
+    "loop_onset_words_p50": 0,
+    "loop_onset_words_p90": 0
+  },
+  {
+    "dir": "eval/traj/4b_it_full/step-4",
+    "bench": "pubmedqa",
+    "n": 500,
+    "unanswered": 0,
+    "at_cap": 0,
+    "at_cap_but_answered": 0,
+    "buckets": {
+      "loop": 0,
+      "long_cot": 0,
+      "placeholder": 0,
+      "no_choice": 0,
+      "judge_miss": 0,
+      "empty": 0
+    },
+    "loop_onset_words_p50": 0,
+    "loop_onset_words_p90": 0
+  },
+  {
+    "dir": "eval/traj/4b_it_full/step-8",
+    "bench": "medqa",
+    "n": 1273,
+    "unanswered": 4,
+    "at_cap": 6,
+    "at_cap_but_answered": 2,
+    "buckets": {
+      "loop": 1,
+      "long_cot": 3,
+      "placeholder": 0,
+      "no_choice": 0,
+      "judge_miss": 0,
+      "empty": 0
+    },
+    "loop_onset_words_p50": 35,
+    "loop_onset_words_p90": 35
+  },
+  {
+    "dir": "eval/traj/4b_it_full/step-8",
+    "bench": "medmcqa",
+    "n": 4183,
+    "unanswered": 9,
+    "at_cap": 4,
+    "at_cap_but_answered": 1,
+    "buckets": {
+      "loop": 0,
+      "long_cot": 3,
+      "placeholder": 0,
+      "no_choice": 5,
+      "judge_miss": 1,
+      "empty": 0
+    },
+    "loop_onset_words_p50": 0,
+    "loop_onset_words_p90": 0
+  },
+  {
+    "dir": "eval/traj/4b_it_full/step-8",
+    "bench": "pubmedqa",
+    "n": 500,
+    "unanswered": 0,
+    "at_cap": 0,
+    "at_cap_but_answered": 0,
+    "buckets": {
+      "loop": 0,
+      "long_cot": 0,
+      "placeholder": 0,
+      "no_choice": 0,
+      "judge_miss": 0,
+      "empty": 0
+    },
+    "loop_onset_words_p50": 0,
+    "loop_onset_words_p90": 0
+  },
+  {
+    "dir": "eval/traj/4b_it_full/step-16",
+    "bench": "medqa",
+    "n": 1273,
+    "unanswered": 11,
+    "at_cap": 13,
+    "at_cap_but_answered": 2,
+    "buckets": {
+      "loop": 7,
+      "long_cot": 4,
+      "placeholder": 0,
+      "no_choice": 0,
+      "judge_miss": 0,
+      "empty": 0
+    },
+    "loop_onset_words_p50": 73,
+    "loop_onset_words_p90": 176
+  },
+  {
+    "dir": "eval/traj/4b_it_full/step-16",
+    "bench": "medmcqa",
+    "n": 4183,
+    "unanswered": 58,
+    "at_cap": 41,
+    "at_cap_but_answered": 13,
+    "buckets": {
+      "loop": 17,
+      "long_cot": 11,
+      "placeholder": 1,
+      "no_choice": 26,
+      "judge_miss": 3,
+      "empty": 0
+    },
+    "loop_onset_words_p50": 41,
+    "loop_onset_words_p90": 120
+  },
+  {
+    "dir": "eval/traj/4b_it_full/step-16",
+    "bench": "pubmedqa",
+    "n": 500,
+    "unanswered": 0,
+    "at_cap": 0,
+    "at_cap_but_answered": 0,
+    "buckets": {
+      "loop": 0,
+      "long_cot": 0,
+      "placeholder": 0,
+      "no_choice": 0,
+      "judge_miss": 0,
+      "empty": 0
+    },
+    "loop_onset_words_p50": 0,
+    "loop_onset_words_p90": 0
+  },
+  {
+    "dir": "eval/traj/4b_it_full/step-32",
+    "bench": "medqa",
+    "n": 1273,
+    "unanswered": 158,
+    "at_cap": 210,
+    "at_cap_but_answered": 72,
+    "buckets": {
+      "loop": 110,
+      "long_cot": 28,
+      "placeholder": 13,
+      "no_choice": 6,
+      "judge_miss": 1,
+      "empty": 0
+    },
+    "loop_onset_words_p50": 73,
+    "loop_onset_words_p90": 173
+  },
+  {
+    "dir": "eval/traj/4b_it_full/step-32",
+    "bench": "medmcqa",
+    "n": 4183,
+    "unanswered": 472,
+    "at_cap": 818,
+    "at_cap_but_answered": 394,
+    "buckets": {
+      "loop": 378,
+      "long_cot": 46,
+      "placeholder": 17,
+      "no_choice": 27,
+      "judge_miss": 4,
+      "empty": 0
+    },
+    "loop_onset_words_p50": 28,
+    "loop_onset_words_p90": 100
+  },
+  {
+    "dir": "eval/traj/4b_it_full/step-32",
+    "bench": "pubmedqa",
+    "n": 500,
+    "unanswered": 0,
+    "at_cap": 5,
+    "at_cap_but_answered": 5,
+    "buckets": {
+      "loop": 0,
+      "long_cot": 0,
+      "placeholder": 0,
+      "no_choice": 0,
+      "judge_miss": 0,
+      "empty": 0
+    },
+    "loop_onset_words_p50": 0,
+    "loop_onset_words_p90": 0
+  },
+  {
+    "dir": "eval/traj/4b_it_full/step-64",
+    "bench": "medqa",
+    "n": 1273,
+    "unanswered": 133,
+    "at_cap": 110,
+    "at_cap_but_answered": 20,
+    "buckets": {
+      "loop": 90,
+      "long_cot": 0,
+      "placeholder": 36,
+      "no_choice": 7,
+      "judge_miss": 0,
+      "empty": 0
+    },
+    "loop_onset_words_p50": 67,
+    "loop_onset_words_p90": 141
+  },
+  {
+    "dir": "eval/traj/4b_it_full/step-64",
+    "bench": "medmcqa",
+    "n": 4183,
+    "unanswered": 554,
+    "at_cap": 343,
+    "at_cap_but_answered": 75,
+    "buckets": {
+      "loop": 266,
+      "long_cot": 2,
+      "placeholder": 113,
+      "no_choice": 168,
+      "judge_miss": 5,
+      "empty": 0
+    },
+    "loop_onset_words_p50": 18,
+    "loop_onset_words_p90": 64
+  },
+  {
+    "dir": "eval/traj/4b_it_full/step-64",
+    "bench": "pubmedqa",
+    "n": 500,
+    "unanswered": 2,
+    "at_cap": 2,
+    "at_cap_but_answered": 0,
+    "buckets": {
+      "loop": 2,
+      "long_cot": 0,
+      "placeholder": 0,
+      "no_choice": 0,
+      "judge_miss": 0,
+      "empty": 0
+    },
+    "loop_onset_words_p50": 62,
+    "loop_onset_words_p90": 62
+  },
+  {
+    "dir": "eval/traj/4b_it_full/step-128",
+    "bench": "medqa",
+    "n": 1273,
+    "unanswered": 154,
+    "at_cap": 178,
+    "at_cap_but_answered": 31,
+    "buckets": {
+      "loop": 143,
+      "long_cot": 4,
+      "placeholder": 3,
+      "no_choice": 4,
+      "judge_miss": 0,
+      "empty": 0
+    },
+    "loop_onset_words_p50": 55,
+    "loop_onset_words_p90": 155
+  },
+  {
+    "dir": "eval/traj/4b_it_full/step-128",
+    "bench": "medmcqa",
+    "n": 4183,
+    "unanswered": 376,
+    "at_cap": 266,
+    "at_cap_but_answered": 45,
+    "buckets": {
+      "loop": 215,
+      "long_cot": 6,
+      "placeholder": 18,
+      "no_choice": 133,
+      "judge_miss": 4,
+      "empty": 0
+    },
+    "loop_onset_words_p50": 18,
+    "loop_onset_words_p90": 64
+  },
+  {
+    "dir": "eval/traj/4b_it_full/step-128",
+    "bench": "pubmedqa",
+    "n": 500,
+    "unanswered": 0,
+    "at_cap": 1,
+    "at_cap_but_answered": 1,
+    "buckets": {
+      "loop": 0,
+      "long_cot": 0,
+      "placeholder": 0,
+      "no_choice": 0,
+      "judge_miss": 0,
+      "empty": 0
+    },
+    "loop_onset_words_p50": 0,
+    "loop_onset_words_p90": 0
+  },
+  {
+    "dir": "eval/traj/4b_it_full/step-256",
+    "bench": "medqa",
+    "n": 1273,
+    "unanswered": 124,
+    "at_cap": 143,
+    "at_cap_but_answered": 25,
+    "buckets": {
+      "loop": 117,
+      "long_cot": 1,
+      "placeholder": 2,
+      "no_choice": 3,
+      "judge_miss": 1,
+      "empty": 0
+    },
+    "loop_onset_words_p50": 59,
+    "loop_onset_words_p90": 134
+  },
+  {
+    "dir": "eval/traj/4b_it_full/step-256",
+    "bench": "medmcqa",
+    "n": 4183,
+    "unanswered": 400,
+    "at_cap": 415,
+    "at_cap_but_answered": 98,
+    "buckets": {
+      "loop": 311,
+      "long_cot": 6,
+      "placeholder": 31,
+      "no_choice": 43,
+      "judge_miss": 9,
+      "empty": 0
+    },
+    "loop_onset_words_p50": 20,
+    "loop_onset_words_p90": 72
+  },
+  {
+    "dir": "eval/traj/4b_it_full/step-256",
+    "bench": "pubmedqa",
+    "n": 500,
+    "unanswered": 1,
+    "at_cap": 1,
+    "at_cap_but_answered": 0,
+    "buckets": {
+      "loop": 1,
+      "long_cot": 0,
+      "placeholder": 0,
+      "no_choice": 0,
+      "judge_miss": 0,
+      "empty": 0
+    },
+    "loop_onset_words_p50": 25,
+    "loop_onset_words_p90": 25
+  },
+  {
+    "dir": "eval/traj/4b_it_full/step-512",
+    "bench": "medqa",
+    "n": 1273,
+    "unanswered": 206,
+    "at_cap": 300,
+    "at_cap_but_answered": 101,
+    "buckets": {
+      "loop": 198,
+      "long_cot": 1,
+      "placeholder": 7,
+      "no_choice": 0,
+      "judge_miss": 0,
+      "empty": 0
+    },
+    "loop_onset_words_p50": 35,
+    "loop_onset_words_p90": 102
+  },
+  {
+    "dir": "eval/traj/4b_it_full/step-512",
+    "bench": "medmcqa",
+    "n": 4183,
+    "unanswered": 453,
+    "at_cap": 896,
+    "at_cap_but_answered": 456,
+    "buckets": {
+      "loop": 437,
+      "long_cot": 3,
+      "placeholder": 5,
+      "no_choice": 2,
+      "judge_miss": 6,
+      "empty": 0
+    },
+    "loop_onset_words_p50": 18,
+    "loop_onset_words_p90": 62
+  },
+  {
+    "dir": "eval/traj/4b_it_full/step-512",
+    "bench": "pubmedqa",
+    "n": 500,
+    "unanswered": 2,
+    "at_cap": 2,
+    "at_cap_but_answered": 0,
+    "buckets": {
+      "loop": 1,
+      "long_cot": 1,
+      "placeholder": 0,
+      "no_choice": 0,
+      "judge_miss": 0,
+      "empty": 0
+    },
+    "loop_onset_words_p50": 0,
+    "loop_onset_words_p90": 0
+  },
+  {
+    "dir": "eval/traj/4b_it_full/step-1024",
+    "bench": "medqa",
+    "n": 1273,
+    "unanswered": 41,
+    "at_cap": 56,
+    "at_cap_but_answered": 18,
+    "buckets": {
+      "loop": 38,
+      "long_cot": 0,
+      "placeholder": 0,
+      "no_choice": 3,
+      "judge_miss": 0,
+      "empty": 0
+    },
+    "loop_onset_words_p50": 38,
+    "loop_onset_words_p90": 100
+  },
+  {
+    "dir": "eval/traj/4b_it_full/step-1024",
+    "bench": "medmcqa",
+    "n": 4183,
+    "unanswered": 373,
+    "at_cap": 568,
+    "at_cap_but_answered": 199,
+    "buckets": {
+      "loop": 363,
+      "long_cot": 6,
+      "placeholder": 0,
+      "no_choice": 4,
+      "judge_miss": 0,
+      "empty": 0
+    },
+    "loop_onset_words_p50": 21,
+    "loop_onset_words_p90": 67
+  },
+  {
+    "dir": "eval/traj/4b_it_full/step-1024",
+    "bench": "pubmedqa",
+    "n": 500,
+    "unanswered": 19,
+    "at_cap": 20,
+    "at_cap_but_answered": 2,
+    "buckets": {
+      "loop": 18,
+      "long_cot": 0,
+      "placeholder": 0,
+      "no_choice": 1,
+      "judge_miss": 0,
+      "empty": 0
+    },
+    "loop_onset_words_p50": 26,
+    "loop_onset_words_p90": 72
+  },
+  {
+    "dir": "eval/traj/4b_it_full/step-2048",
+    "bench": "medqa",
+    "n": 1273,
+    "unanswered": 152,
+    "at_cap": 224,
+    "at_cap_but_answered": 73,
+    "buckets": {
+      "loop": 150,
+      "long_cot": 1,
+      "placeholder": 0,
+      "no_choice": 1,
+      "judge_miss": 0,
+      "empty": 0
+    },
+    "loop_onset_words_p50": 36,
+    "loop_onset_words_p90": 79
+  },
+  {
+    "dir": "eval/traj/4b_it_full/step-2048",
+    "bench": "medmcqa",
+    "n": 4183,
+    "unanswered": 355,
+    "at_cap": 637,
+    "at_cap_but_answered": 285,
+    "buckets": {
+      "loop": 335,
+      "long_cot": 17,
+      "placeholder": 0,
+      "no_choice": 2,
+      "judge_miss": 1,
+      "empty": 0
+    },
+    "loop_onset_words_p50": 19,
+    "loop_onset_words_p90": 54
+  },
+  {
+    "dir": "eval/traj/4b_it_full/step-2048",
+    "bench": "pubmedqa",
+    "n": 500,
+    "unanswered": 3,
+    "at_cap": 5,
+    "at_cap_but_answered": 2,
+    "buckets": {
+      "loop": 3,
+      "long_cot": 0,
+      "placeholder": 0,
+      "no_choice": 0,
+      "judge_miss": 0,
+      "empty": 0
+    },
+    "loop_onset_words_p50": 3,
+    "loop_onset_words_p90": 30
+  },
+  {
+    "dir": "eval/traj/4b_it_full/step-4096",
+    "bench": "medqa",
+    "n": 1273,
+    "unanswered": 56,
+    "at_cap": 82,
+    "at_cap_but_answered": 29,
+    "buckets": {
+      "loop": 51,
+      "long_cot": 2,
+      "placeholder": 1,
+      "no_choice": 2,
+      "judge_miss": 0,
+      "empty": 0
+    },
+    "loop_onset_words_p50": 52,
+    "loop_onset_words_p90": 93
+  },
+  {
+    "dir": "eval/traj/4b_it_full/step-4096",
+    "bench": "medmcqa",
+    "n": 4183,
+    "unanswered": 349,
+    "at_cap": 595,
+    "at_cap_but_answered": 253,
+    "buckets": {
+      "loop": 329,
+      "long_cot": 13,
+      "placeholder": 1,
+      "no_choice": 2,
+      "judge_miss": 4,
+      "empty": 0
+    },
+    "loop_onset_words_p50": 27,
+    "loop_onset_words_p90": 81
+  },
+  {
+    "dir": "eval/traj/4b_it_full/step-4096",
+    "bench": "pubmedqa",
+    "n": 500,
+    "unanswered": 2,
+    "at_cap": 4,
+    "at_cap_but_answered": 2,
+    "buckets": {
+      "loop": 2,
+      "long_cot": 0,
+      "placeholder": 0,
+      "no_choice": 0,
+      "judge_miss": 0,
+      "empty": 0
+    },
+    "loop_onset_words_p50": 41,
+    "loop_onset_words_p90": 41
+  },
+  {
+    "dir": "eval/traj/4b_it_full/step-4882",
+    "bench": "medqa",
+    "n": 1273,
+    "unanswered": 44,
+    "at_cap": 71,
+    "at_cap_but_answered": 28,
+    "buckets": {
+      "loop": 41,
+      "long_cot": 2,
+      "placeholder": 0,
+      "no_choice": 1,
+      "judge_miss": 0,
+      "empty": 0
+    },
+    "loop_onset_words_p50": 62,
+    "loop_onset_words_p90": 99
+  },
+  {
+    "dir": "eval/traj/4b_it_full/step-4882",
+    "bench": "medmcqa",
+    "n": 4183,
+    "unanswered": 327,
+    "at_cap": 562,
+    "at_cap_but_answered": 243,
+    "buckets": {
+      "loop": 311,
+      "long_cot": 8,
+      "placeholder": 1,
+      "no_choice": 6,
+      "judge_miss": 1,
+      "empty": 0
+    },
+    "loop_onset_words_p50": 26,
+    "loop_onset_words_p90": 74
+  },
+  {
+    "dir": "eval/traj/4b_it_full/step-4882",
+    "bench": "pubmedqa",
+    "n": 500,
+    "unanswered": 3,
+    "at_cap": 4,
+    "at_cap_but_answered": 1,
+    "buckets": {
+      "loop": 3,
+      "long_cot": 0,
+      "placeholder": 0,
+      "no_choice": 0,
+      "judge_miss": 0,
+      "empty": 0
+    },
+    "loop_onset_words_p50": 13,
+    "loop_onset_words_p90": 51
+  },
+  {
+    "dir": "eval/traj/1b_it_full_v3/step-4882",
+    "bench": "medqa",
+    "n": 1273,
+    "unanswered": 106,
+    "at_cap": 160,
+    "at_cap_but_answered": 59,
+    "buckets": {
+      "loop": 101,
+      "long_cot": 0,
+      "placeholder": 0,
+      "no_choice": 5,
+      "judge_miss": 0,
+      "empty": 0
+    },
+    "loop_onset_words_p50": 27,
+    "loop_onset_words_p90": 68
+  },
+  {
+    "dir": "eval/traj/1b_it_full_v3/step-4882",
+    "bench": "medmcqa",
+    "n": 4183,
+    "unanswered": 360,
+    "at_cap": 730,
+    "at_cap_but_answered": 374,
+    "buckets": {
+      "loop": 356,
+      "long_cot": 0,
+      "placeholder": 0,
+      "no_choice": 2,
+      "judge_miss": 2,
+      "empty": 0
+    },
+    "loop_onset_words_p50": 20,
+    "loop_onset_words_p90": 62
+  },
+  {
+    "dir": "eval/traj/1b_it_full_v3/step-4882",
+    "bench": "pubmedqa",
+    "n": 500,
+    "unanswered": 10,
+    "at_cap": 15,
+    "at_cap_but_answered": 5,
+    "buckets": {
+      "loop": 10,
+      "long_cot": 0,
+      "placeholder": 0,
+      "no_choice": 0,
+      "judge_miss": 0,
+      "empty": 0
+    },
+    "loop_onset_words_p50": 19,
+    "loop_onset_words_p90": 67
+  },
+  {
+    "dir": "eval/traj/270m_it_full/step-4882",
+    "bench": "medqa",
+    "n": 1273,
+    "unanswered": 433,
+    "at_cap": 388,
+    "at_cap_but_answered": 23,
+    "buckets": {
+      "loop": 363,
+      "long_cot": 2,
+      "placeholder": 49,
+      "no_choice": 17,
+      "judge_miss": 2,
+      "empty": 0
+    },
+    "loop_onset_words_p50": 23,
+    "loop_onset_words_p90": 91
+  },
+  {
+    "dir": "eval/traj/270m_it_full/step-4882",
+    "bench": "medmcqa",
+    "n": 4183,
+    "unanswered": 1425,
+    "at_cap": 1219,
+    "at_cap_but_answered": 176,
+    "buckets": {
+      "loop": 1038,
+      "long_cot": 5,
+      "placeholder": 318,
+      "no_choice": 53,
+      "judge_miss": 11,
+      "empty": 0
+    },
+    "loop_onset_words_p50": 9,
+    "loop_onset_words_p90": 39
+  },
+  {
+    "dir": "eval/traj/270m_it_full/step-4882",
+    "bench": "pubmedqa",
+    "n": 500,
+    "unanswered": 354,
+    "at_cap": 472,
+    "at_cap_but_answered": 121,
+    "buckets": {
+      "loop": 349,
+      "long_cot": 2,
+      "placeholder": 0,
+      "no_choice": 3,
+      "judge_miss": 0,
+      "empty": 0
+    },
+    "loop_onset_words_p50": 14,
+    "loop_onset_words_p90": 64
+  }
+]

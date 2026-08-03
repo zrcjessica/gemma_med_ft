@@ -98,6 +98,12 @@ def main():
     ap.add_argument("--max-new-tokens", type=int, default=1024)
     ap.add_argument("--tensor-parallel-size", type=int, default=1)
     ap.add_argument("--temperature", type=float, default=0.0)
+    # Greedy decoding sends the fine-tuned models into verbatim repetition loops
+    # that run to --max-new-tokens without ever naming an option (docs/BEHAVIORAL_EVAL.md
+    # §8). These two exist to test that; 1.0 / 0.0 is the frozen default and the
+    # only setting any published number may use.
+    ap.add_argument("--repetition-penalty", type=float, default=1.0)
+    ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--label", default=None)
     args = ap.parse_args()
 
@@ -114,7 +120,18 @@ def main():
         dtype="bfloat16",
         trust_remote_code=True,
     )
-    sampling = SamplingParams(temperature=args.temperature, max_tokens=args.max_new_tokens)
+    sampling = SamplingParams(
+        temperature=args.temperature,
+        max_tokens=args.max_new_tokens,
+        repetition_penalty=args.repetition_penalty,
+        seed=args.seed,
+    )
+    decode = {
+        "temperature": args.temperature,
+        "max_new_tokens": args.max_new_tokens,
+        "repetition_penalty": args.repetition_penalty,
+        "seed": args.seed,
+    }
 
     out_path = Path(args.out)
     out_path.mkdir(parents=True, exist_ok=True)
@@ -145,16 +162,24 @@ def main():
                     "question": it["question"],
                     "options": it["options"],
                     "output": g.outputs[0].text,
+                    # Saved so "did this response hit the cap?" is a field lookup
+                    # rather than a re-tokenisation of the whole corpus.
+                    "n_gen_tokens": len(g.outputs[0].token_ids),
+                    "finish_reason": g.outputs[0].finish_reason,
                 }
                 f.write(json.dumps(row) + "\n")
 
-        results[name] = {"n": len(items)}
-        print(f"{name:<10} generated n={len(items)}  (unscored -- run gemma_med.judge)")
+        n_cap = sum(1 for g in gens if g.outputs[0].finish_reason == "length")
+        results[name] = {"n": len(items), "n_at_token_cap": n_cap}
+        print(f"{name:<10} generated n={len(items)}  at_cap={n_cap}  (unscored -- run gemma_med.judge)")
 
     summary = {
         "model": args.model_path,
         "label": args.label or Path(args.model_path).name,
         "scored": False,
+        # Part of the instrument: two runs with different decode settings are no
+        # more comparable than two runs with different judges.
+        "decode": decode,
         "results": results,
     }
     (out_path / "summary.json").write_text(json.dumps(summary, indent=2))
