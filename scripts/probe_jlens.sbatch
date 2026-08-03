@@ -16,8 +16,9 @@
 # Env vars:
 #   SIZE        270m|1b|4b|12b|27b            (required; resolves the t=0 base)
 #   KIND        it | pt                        (default it)
-#   RUN_DIR     dir containing checkpoint-*/   (required unless CKPTS set)
+#   RUN_DIR     dir containing checkpoint-*/   (required unless CKPTS/BASE_ONLY set)
 #   CKPTS       explicit space-sep ckpt dirs   (optional; overrides RUN_DIR)
+#   BASE_ONLY   1 = fit t=0 only, no ckpts     (seeds .base_lens.pt for a fan-out)
 #   FIT_CORPUS  generic text, one seq per line (default data/jlens/fit_corpus.txt)
 #   PROBE_SET   category<TAB>prompt tsv        (default data/jlens/probe_set.tsv)
 #   OUT         output dir                     (default eval/jlens/<size>_<kind>)
@@ -59,8 +60,8 @@ if [[ -z "${BASE_MODEL}" || ! -d "${BASE_MODEL}" ]]; then
     echo "ERROR: no gemma-3-${SIZE}-${KIND} snapshot found (set BASE_MODEL explicitly)." >&2
     exit 1
 fi
-if [[ -z "${RUN_DIR:-}" && -z "${CKPTS:-}" ]]; then
-    echo "ERROR: set RUN_DIR or CKPTS." >&2
+if [[ -z "${RUN_DIR:-}" && -z "${CKPTS:-}" && "${BASE_ONLY:-0}" != "1" ]]; then
+    echo "ERROR: set RUN_DIR, CKPTS, or BASE_ONLY=1." >&2
     exit 1
 fi
 
@@ -99,6 +100,9 @@ ARGS=(--base-model "${BASE_MODEL}" --fit-corpus "${FIT_CORPUS}" --probe-set "${P
 [[ -n "${RUN_DIR:-}" ]] && ARGS+=(--run-dir "${RUN_DIR}")
 [[ -n "${CKPTS:-}" ]] && ARGS+=(--checkpoints ${CKPTS})
 [[ -n "${SAVE_LENSES:-}" ]] && ARGS+=(--save-lenses)
+# 27b retains a full-depth graph over dim_batch replicas on top of 55G of
+# weights; drop DIM_BATCH if it OOMs (costs wall-clock, not accuracy).
+[[ -n "${DIM_BATCH:-}" ]] && ARGS+=(--dim-batch "${DIM_BATCH}")
 
 python scripts/probe_jlens.py "${ARGS[@]}"
 
