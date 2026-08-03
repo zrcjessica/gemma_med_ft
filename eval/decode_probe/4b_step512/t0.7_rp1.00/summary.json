@@ -1,0 +1,21 @@
+{
+  "model": "/gpfs/data/oermannlab/users/zhouj14/gemma_med_ft/outputs/4b/full_lr1e-5_25911616/checkpoint-512",
+  "label": "4b_step512-t0.7_rp1.00",
+  "scored": false,
+  "decode": {
+    "temperature": 0.7,
+    "max_new_tokens": 1024,
+    "repetition_penalty": 1.0,
+    "seed": 0
+  },
+  "results": {
+    "medqa": {
+      "n": 300,
+      "n_at_token_cap": 5
+    },
+    "medmcqa": {
+      "n": 300,
+      "n_at_token_cap": 2
+    }
+  }
+}

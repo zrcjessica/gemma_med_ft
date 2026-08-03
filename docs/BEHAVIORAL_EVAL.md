@@ -343,39 +343,79 @@ break comparability with every generation produced so far (§13, rule 1 applies 
 the prompt as much as to the judge). Left frozen deliberately; noted here so the
 270m numbers are read with it in mind.
 
-### The open question, and the experiment for it
+### It is the decoding — measured
 
-Our eval decodes greedily (`temperature=0.0`) with no repetition penalty. Greedy
-decoding is where degenerate repetition is expected to live, so the live question
-is whether this shortfall is a property of *the model* or of *how we sample it* —
-and that changes how §6's `answer_rate` trace should be read against the lens.
+Our eval decodes greedily (`temperature=0.0`) with no repetition penalty, which
+is exactly where degenerate repetition is expected to live. So: is the shortfall
+a property of *the model* or of *how we sample it*?
 
-`scripts/redecode_probe.sbatch` settles it: one checkpoint (step-512, the worst
-point), a fixed 300-item slice of MedQA and MedMCQA, four decode settings,
-everything else held constant.
+`scripts/redecode_probe.sbatch` answers it. One checkpoint (step-512, the worst
+point), a fixed 300-item slice of MedQA and MedMCQA, four decode settings, model
+and prompt and items and judge held constant. Judged 2026-08-03 by the same
+frozen `claude-haiku-4-5`, $2.16, sync mode.
 
-| Arm | temperature | repetition_penalty |
-|---|---|---|
-| control | 0.0 | 1.00 |
-| | 0.0 | 1.05 |
-| | 0.0 | 1.10 |
-| | 0.7 | 1.00 |
+| Arm | MedQA rate / raw / answered | MedMCQA rate / raw / answered | loops (of 300+300) |
+|---|---|---|---:|
+| **control** `t=0.0 rp=1.00` | **85.7** / 47.7 / 55.6 | **87.3** / 40.3 / 46.2 | 41 + 37 |
+| `t=0.0 rp=1.05` | 91.7 / 51.0 / 55.6 | 93.7 / 45.7 / 48.8 | 23 + 16 |
+| `t=0.0 rp=1.10` | **98.7** / 51.0 / 51.7 | **98.3** / 46.3 / 47.1 | 3 + 3 |
+| `t=0.7 rp=1.00` | **99.0** / 54.3 / 54.9 | **98.7** / 43.3 / 43.9 | 3 + 1 |
+
+**A repetition penalty of 1.10 removes the shortfall.** Answer rate goes
+85.7 → 98.7 and 87.3 → 98.3, i.e. back to where the untuned base and
+`medgemma-4b-it` sit (99.5%+), and the loop count collapses by ~92%. Sampling at
+`t=0.7` does the same thing by the same mechanism. The control arm reproduces the
+trajectory row on this slice, so the comparison is internally anchored.
+
+**The rows it recovers are worth about what the model is generally worth, not
+more.** `acc_raw` rises +3.3pp (MedQA) and +6.0pp (MedMCQA) — that is the format
+loss being handed back. `acc_answered` does *not* rise; on MedQA it falls
+55.6 → 51.7, because the recovered items are the ones the model was least sure
+of. **No medical capability appears. It was never missing** — which is precisely
+what §6 claimed from `acc_answered` staying flat through the dip, now confirmed
+by a second, independent route.
+
+Caveats, in order of how likely they are to bite:
+
+- **One checkpoint, 300 items per benchmark.** Enough to identify the mechanism,
+  not enough to restate §6 or §7. Re-deciding the study's decode config means
+  re-decoding every arm.
+- **A repetition penalty is not free.** It taxes legitimate repetition, and
+  medical answers repeat terminology by nature. The 3.9pp `acc_answered` drop on
+  MedQA at `rp=1.10` is the visible edge of that; `rp=1.05` halves the loops
+  while leaving `acc_answered` untouched, and may be the better operating point.
+- **`t=0.7` buys the same fix at the cost of determinism.** Seeded here, but
+  sampling adds run-to-run variance to every number in the study. If the config
+  ever changes, greedy + a penalty is the smaller intervention.
+
+**What this does to §7's conclusion.** Our remaining MedMCQA distance to MedGemma
+was attributed there to format compliance rather than medicine. That now has a
+mechanism and a demonstrated fix: it is degenerate repetition under greedy
+decoding, and it is ours, not the model's. The honest statement of §7's gap is
+that at matched decoding our step-512 checkpoint answers as reliably as MedGemma
+does — the accuracy gap that remains after that is the real one.
 
 ```bash
-sbatch --array=0-3 scripts/redecode_probe.sbatch              # BigPurple, ~1 A100-hour
-.venv-judge/bin/python -m gemma_med.judge --root eval/decode_probe/4b_step512 --mode sync
+sbatch --array=0-3 scripts/redecode_probe.sbatch              # BigPurple, ~6 min/arm on 1 A100
+.venv-judge/bin/python -m gemma_med.judge --pred-dir eval/decode_probe/4b_step512/<arm> --mode sync
 .venv-probe/bin/python scripts/analyze_unanswered.py eval/decode_probe/4b_step512/*
 ```
 
-If answer rate returns to ~99% under a repetition penalty, the remaining distance
-to MedGemma on MedMCQA is an artefact of our decoding, not lost capability.
+`--root` only globs `step-*`, so the arms are judged one `--pred-dir` at a time.
+Array tasks each get their own `VLLM_CACHE_ROOT`: co-scheduled vLLM processes
+otherwise race on the shared torch-compile cache and die with "corrupted
+compilation artifact" (it killed 3 of 4 on the first submission).
 
 > **Decode settings are part of the instrument.** `temperature=0.0`,
-> `max_new_tokens=1024`, `repetition_penalty=1.0` is the frozen configuration and
-> the only one any published number may use; `evaluate.py` now records it in
-> `summary.json` for exactly this reason. The probe above lives in its own
-> `eval/decode_probe/` tree and its numbers may not be mixed into §6 or §7 —
-> same rule as regex-vs-judge (§13).
+> `max_new_tokens=1024`, `repetition_penalty=1.0` **remains** the frozen
+> configuration and the only one any published number may use — the result above
+> is a reason to consider changing it, not a licence to have changed it.
+> `evaluate.py` now records the config in `summary.json` for exactly this reason.
+> The probe lives in its own `eval/decode_probe/` tree and its numbers may not be
+> mixed into §6 or §7 — same rule as regex-vs-judge (§13). Changing the config
+> means re-decoding **and re-judging every arm**, on the same argument §5 makes
+> about the regex: a change that lands unevenly across sizes and training steps
+> cannot be corrected for after the fact.
 
 Predictions written from this commit on also carry `finish_reason` and
 `n_gen_tokens`, so "did this response hit the cap?" is a field lookup. Older

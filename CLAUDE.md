@@ -223,6 +223,13 @@ come, land by p99=418 — so a bigger cap recovers nothing. MedGemma loops on
 0.4% of rows, we loop on 13%. Bucket any eval dir with
 `scripts/analyze_unanswered.py`; full write-up in `docs/BEHAVIORAL_EVAL.md` §8.
 
+**It is the decoding, and it is fixable** (measured 2026-08-03 on step-512, 300
+items/bench): `repetition_penalty=1.10` takes answer rate 85.7 → 98.7 (MedQA)
+and 87.3 → 98.3 (MedMCQA), i.e. back to base/MedGemma levels; `temperature=0.7`
+does the same. `acc_raw` gains +3.3/+6.0pp, `acc_answered` does **not** rise —
+no capability appears, it was never missing. The frozen config is still
+`t=0.0, rp=1.0`: adopting a new one means re-decoding *and* re-judging every arm.
+
 ## Run commands
 
 ```bash

@@ -1,0 +1,24 @@
+{
+  "judge_provider": "anthropic",
+  "judge_model": "claude-haiku-4-5",
+  "results": {
+    "medqa": {
+      "n": 300,
+      "n_expected": 300,
+      "acc_raw": 47.67,
+      "acc_answered": 55.64,
+      "answer_rate": 85.67,
+      "judge_self_disagreement": 0,
+      "judge_self_disagreement_pct": 0.0
+    },
+    "medmcqa": {
+      "n": 300,
+      "n_expected": 300,
+      "acc_raw": 40.33,
+      "acc_answered": 46.18,
+      "answer_rate": 87.33,
+      "judge_self_disagreement": 4,
+      "judge_self_disagreement_pct": 1.33
+    }
+  }
+}
