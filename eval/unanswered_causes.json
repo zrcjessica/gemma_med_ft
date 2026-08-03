@@ -14,8 +14,13 @@
       "judge_miss": 2,
       "empty": 0
     },
-    "loop_onset_words_p50": 165,
-    "loop_onset_words_p90": 165
+    "at_cap_but_answered_looping": 0,
+    "unit": "tokens",
+    "loop_onset_p50": 287,
+    "loop_onset_p90": 287,
+    "answer_position_p50": 157,
+    "answer_position_p99": 575,
+    "answer_position_max": 815
   },
   {
     "dir": "eval/gemma-3-270m-it-baseline",
@@ -32,8 +37,13 @@
       "judge_miss": 10,
       "empty": 0
     },
-    "loop_onset_words_p50": 55,
-    "loop_onset_words_p90": 92
+    "at_cap_but_answered_looping": 2,
+    "unit": "tokens",
+    "loop_onset_p50": 105,
+    "loop_onset_p90": 165,
+    "answer_position_p50": 125,
+    "answer_position_p99": 438,
+    "answer_position_max": 568
   },
   {
     "dir": "eval/gemma-3-270m-it-baseline",
@@ -50,8 +60,13 @@
       "judge_miss": 0,
       "empty": 0
     },
-    "loop_onset_words_p50": 20,
-    "loop_onset_words_p90": 63
+    "at_cap_but_answered_looping": 1,
+    "unit": "tokens",
+    "loop_onset_p50": 39,
+    "loop_onset_p90": 82,
+    "answer_position_p50": 392,
+    "answer_position_p99": 804,
+    "answer_position_max": 804
   },
   {
     "dir": "eval/gemma-3-1b-it-baseline",
@@ -68,8 +83,13 @@
       "judge_miss": 2,
       "empty": 0
     },
-    "loop_onset_words_p50": 0,
-    "loop_onset_words_p90": 0
+    "at_cap_but_answered_looping": 0,
+    "unit": "tokens",
+    "loop_onset_p50": 0,
+    "loop_onset_p90": 0,
+    "answer_position_p50": 343,
+    "answer_position_p99": 574,
+    "answer_position_max": 710
   },
   {
     "dir": "eval/gemma-3-1b-it-baseline",
@@ -86,8 +106,13 @@
       "judge_miss": 1,
       "empty": 0
     },
-    "loop_onset_words_p50": 54,
-    "loop_onset_words_p90": 101
+    "at_cap_but_answered_looping": 0,
+    "unit": "tokens",
+    "loop_onset_p50": 82,
+    "loop_onset_p90": 165,
+    "answer_position_p50": 164,
+    "answer_position_p99": 390,
+    "answer_position_max": 520
   },
   {
     "dir": "eval/gemma-3-1b-it-baseline",
@@ -104,8 +129,13 @@
       "judge_miss": 0,
       "empty": 0
     },
-    "loop_onset_words_p50": 0,
-    "loop_onset_words_p90": 0
+    "at_cap_but_answered_looping": 0,
+    "unit": "tokens",
+    "loop_onset_p50": 0,
+    "loop_onset_p90": 0,
+    "answer_position_p50": 64,
+    "answer_position_p99": 241,
+    "answer_position_max": 255
   },
   {
     "dir": "eval/gemma-3-4b-it-baseline",
@@ -122,8 +152,13 @@
       "judge_miss": 0,
       "empty": 0
     },
-    "loop_onset_words_p50": 0,
-    "loop_onset_words_p90": 0
+    "at_cap_but_answered_looping": 0,
+    "unit": "tokens",
+    "loop_onset_p50": 0,
+    "loop_onset_p90": 0,
+    "answer_position_p50": 465,
+    "answer_position_p99": 716,
+    "answer_position_max": 973
   },
   {
     "dir": "eval/gemma-3-4b-it-baseline",
@@ -140,8 +175,13 @@
       "judge_miss": 1,
       "empty": 0
     },
-    "loop_onset_words_p50": 0,
-    "loop_onset_words_p90": 0
+    "at_cap_but_answered_looping": 0,
+    "unit": "tokens",
+    "loop_onset_p50": 0,
+    "loop_onset_p90": 0,
+    "answer_position_p50": 212,
+    "answer_position_p99": 518,
+    "answer_position_max": 903
   },
   {
     "dir": "eval/gemma-3-4b-it-baseline",
@@ -158,8 +198,13 @@
       "judge_miss": 0,
       "empty": 0
     },
-    "loop_onset_words_p50": 0,
-    "loop_onset_words_p90": 0
+    "at_cap_but_answered_looping": 0,
+    "unit": "tokens",
+    "loop_onset_p50": 0,
+    "loop_onset_p90": 0,
+    "answer_position_p50": 91,
+    "answer_position_p99": 288,
+    "answer_position_max": 296
   },
   {
     "dir": "eval/medgemma-4b-it",
@@ -176,8 +221,13 @@
       "judge_miss": 1,
       "empty": 0
     },
-    "loop_onset_words_p50": 85,
-    "loop_onset_words_p90": 91
+    "at_cap_but_answered_looping": 1,
+    "unit": "tokens",
+    "loop_onset_p50": 110,
+    "loop_onset_p90": 131,
+    "answer_position_p50": 294,
+    "answer_position_p99": 651,
+    "answer_position_max": 730
   },
   {
     "dir": "eval/medgemma-4b-it",
@@ -194,8 +244,13 @@
       "judge_miss": 1,
       "empty": 0
     },
-    "loop_onset_words_p50": 27,
-    "loop_onset_words_p90": 77
+    "at_cap_but_answered_looping": 2,
+    "unit": "tokens",
+    "loop_onset_p50": 40,
+    "loop_onset_p90": 100,
+    "answer_position_p50": 152,
+    "answer_position_p99": 440,
+    "answer_position_max": 778
   },
   {
     "dir": "eval/medgemma-4b-it",
@@ -212,8 +267,13 @@
       "judge_miss": 0,
       "empty": 0
     },
-    "loop_onset_words_p50": 0,
-    "loop_onset_words_p90": 0
+    "at_cap_but_answered_looping": 0,
+    "unit": "tokens",
+    "loop_onset_p50": 0,
+    "loop_onset_p90": 0,
+    "answer_position_p50": 66,
+    "answer_position_p99": 166,
+    "answer_position_max": 196
   },
   {
     "dir": "eval/traj/4b_it_full/step-2",
@@ -230,8 +290,13 @@
       "judge_miss": 1,
       "empty": 0
     },
-    "loop_onset_words_p50": 0,
-    "loop_onset_words_p90": 0
+    "at_cap_but_answered_looping": 0,
+    "unit": "tokens",
+    "loop_onset_p50": 0,
+    "loop_onset_p90": 0,
+    "answer_position_p50": 461,
+    "answer_position_p99": 727,
+    "answer_position_max": 1021
   },
   {
     "dir": "eval/traj/4b_it_full/step-2",
@@ -248,8 +313,13 @@
       "judge_miss": 3,
       "empty": 0
     },
-    "loop_onset_words_p50": 189,
-    "loop_onset_words_p90": 189
+    "at_cap_but_answered_looping": 0,
+    "unit": "tokens",
+    "loop_onset_p50": 310,
+    "loop_onset_p90": 310,
+    "answer_position_p50": 212,
+    "answer_position_p99": 519,
+    "answer_position_max": 974
   },
   {
     "dir": "eval/traj/4b_it_full/step-2",
@@ -266,8 +336,13 @@
       "judge_miss": 0,
       "empty": 0
     },
-    "loop_onset_words_p50": 0,
-    "loop_onset_words_p90": 0
+    "at_cap_but_answered_looping": 0,
+    "unit": "tokens",
+    "loop_onset_p50": 0,
+    "loop_onset_p90": 0,
+    "answer_position_p50": 91,
+    "answer_position_p99": 267,
+    "answer_position_max": 290
   },
   {
     "dir": "eval/traj/4b_it_full/step-4",
@@ -284,8 +359,13 @@
       "judge_miss": 0,
       "empty": 0
     },
-    "loop_onset_words_p50": 0,
-    "loop_onset_words_p90": 0
+    "at_cap_but_answered_looping": 0,
+    "unit": "tokens",
+    "loop_onset_p50": 0,
+    "loop_onset_p90": 0,
+    "answer_position_p50": 459,
+    "answer_position_p99": 716,
+    "answer_position_max": 974
   },
   {
     "dir": "eval/traj/4b_it_full/step-4",
@@ -302,8 +382,13 @@
       "judge_miss": 1,
       "empty": 0
     },
-    "loop_onset_words_p50": 0,
-    "loop_onset_words_p90": 0
+    "at_cap_but_answered_looping": 0,
+    "unit": "tokens",
+    "loop_onset_p50": 0,
+    "loop_onset_p90": 0,
+    "answer_position_p50": 212,
+    "answer_position_p99": 521,
+    "answer_position_max": 929
   },
   {
     "dir": "eval/traj/4b_it_full/step-4",
@@ -320,8 +405,13 @@
       "judge_miss": 0,
       "empty": 0
     },
-    "loop_onset_words_p50": 0,
-    "loop_onset_words_p90": 0
+    "at_cap_but_answered_looping": 0,
+    "unit": "tokens",
+    "loop_onset_p50": 0,
+    "loop_onset_p90": 0,
+    "answer_position_p50": 91,
+    "answer_position_p99": 270,
+    "answer_position_max": 354
   },
   {
     "dir": "eval/traj/4b_it_full/step-8",
@@ -338,8 +428,13 @@
       "judge_miss": 0,
       "empty": 0
     },
-    "loop_onset_words_p50": 35,
-    "loop_onset_words_p90": 35
+    "at_cap_but_answered_looping": 0,
+    "unit": "tokens",
+    "loop_onset_p50": 40,
+    "loop_onset_p90": 40,
+    "answer_position_p50": 458,
+    "answer_position_p99": 736,
+    "answer_position_max": 985
   },
   {
     "dir": "eval/traj/4b_it_full/step-8",
@@ -356,8 +451,13 @@
       "judge_miss": 1,
       "empty": 0
     },
-    "loop_onset_words_p50": 0,
-    "loop_onset_words_p90": 0
+    "at_cap_but_answered_looping": 0,
+    "unit": "tokens",
+    "loop_onset_p50": 0,
+    "loop_onset_p90": 0,
+    "answer_position_p50": 210,
+    "answer_position_p99": 520,
+    "answer_position_max": 920
   },
   {
     "dir": "eval/traj/4b_it_full/step-8",
@@ -374,8 +474,13 @@
       "judge_miss": 0,
       "empty": 0
     },
-    "loop_onset_words_p50": 0,
-    "loop_onset_words_p90": 0
+    "at_cap_but_answered_looping": 0,
+    "unit": "tokens",
+    "loop_onset_p50": 0,
+    "loop_onset_p90": 0,
+    "answer_position_p50": 91,
+    "answer_position_p99": 274,
+    "answer_position_max": 305
   },
   {
     "dir": "eval/traj/4b_it_full/step-16",
@@ -392,8 +497,13 @@
       "judge_miss": 0,
       "empty": 0
     },
-    "loop_onset_words_p50": 73,
-    "loop_onset_words_p90": 176
+    "at_cap_but_answered_looping": 2,
+    "unit": "tokens",
+    "loop_onset_p50": 100,
+    "loop_onset_p90": 281,
+    "answer_position_p50": 354,
+    "answer_position_p99": 615,
+    "answer_position_max": 715
   },
   {
     "dir": "eval/traj/4b_it_full/step-16",
@@ -410,8 +520,13 @@
       "judge_miss": 3,
       "empty": 0
     },
-    "loop_onset_words_p50": 41,
-    "loop_onset_words_p90": 120
+    "at_cap_but_answered_looping": 11,
+    "unit": "tokens",
+    "loop_onset_p50": 66,
+    "loop_onset_p90": 173,
+    "answer_position_p50": 176,
+    "answer_position_p99": 420,
+    "answer_position_max": 1007
   },
   {
     "dir": "eval/traj/4b_it_full/step-16",
@@ -428,8 +543,13 @@
       "judge_miss": 0,
       "empty": 0
     },
-    "loop_onset_words_p50": 0,
-    "loop_onset_words_p90": 0
+    "at_cap_but_answered_looping": 0,
+    "unit": "tokens",
+    "loop_onset_p50": 0,
+    "loop_onset_p90": 0,
+    "answer_position_p50": 77,
+    "answer_position_p99": 232,
+    "answer_position_max": 304
   },
   {
     "dir": "eval/traj/4b_it_full/step-32",
@@ -446,8 +566,13 @@
       "judge_miss": 1,
       "empty": 0
     },
-    "loop_onset_words_p50": 73,
-    "loop_onset_words_p90": 173
+    "at_cap_but_answered_looping": 49,
+    "unit": "tokens",
+    "loop_onset_p50": 110,
+    "loop_onset_p90": 249,
+    "answer_position_p50": 370,
+    "answer_position_p99": 859,
+    "answer_position_max": 1019
   },
   {
     "dir": "eval/traj/4b_it_full/step-32",
@@ -464,8 +589,13 @@
       "judge_miss": 4,
       "empty": 0
     },
-    "loop_onset_words_p50": 28,
-    "loop_onset_words_p90": 100
+    "at_cap_but_answered_looping": 341,
+    "unit": "tokens",
+    "loop_onset_p50": 35,
+    "loop_onset_p90": 130,
+    "answer_position_p50": 195,
+    "answer_position_p99": 680,
+    "answer_position_max": 1015
   },
   {
     "dir": "eval/traj/4b_it_full/step-32",
@@ -482,8 +612,13 @@
       "judge_miss": 0,
       "empty": 0
     },
-    "loop_onset_words_p50": 0,
-    "loop_onset_words_p90": 0
+    "at_cap_but_answered_looping": 4,
+    "unit": "tokens",
+    "loop_onset_p50": 0,
+    "loop_onset_p90": 0,
+    "answer_position_p50": 112,
+    "answer_position_p99": 452,
+    "answer_position_max": 594
   },
   {
     "dir": "eval/traj/4b_it_full/step-64",
@@ -500,8 +635,13 @@
       "judge_miss": 0,
       "empty": 0
     },
-    "loop_onset_words_p50": 67,
-    "loop_onset_words_p90": 141
+    "at_cap_but_answered_looping": 17,
+    "unit": "tokens",
+    "loop_onset_p50": 93,
+    "loop_onset_p90": 211,
+    "answer_position_p50": 280,
+    "answer_position_p99": 657,
+    "answer_position_max": 796
   },
   {
     "dir": "eval/traj/4b_it_full/step-64",
@@ -518,8 +658,13 @@
       "judge_miss": 5,
       "empty": 0
     },
-    "loop_onset_words_p50": 18,
-    "loop_onset_words_p90": 64
+    "at_cap_but_answered_looping": 74,
+    "unit": "tokens",
+    "loop_onset_p50": 22,
+    "loop_onset_p90": 90,
+    "answer_position_p50": 115,
+    "answer_position_p99": 592,
+    "answer_position_max": 740
   },
   {
     "dir": "eval/traj/4b_it_full/step-64",
@@ -536,8 +681,13 @@
       "judge_miss": 0,
       "empty": 0
     },
-    "loop_onset_words_p50": 62,
-    "loop_onset_words_p90": 62
+    "at_cap_but_answered_looping": 0,
+    "unit": "tokens",
+    "loop_onset_p50": 75,
+    "loop_onset_p90": 75,
+    "answer_position_p50": 155,
+    "answer_position_p99": 436,
+    "answer_position_max": 506
   },
   {
     "dir": "eval/traj/4b_it_full/step-128",
@@ -554,8 +704,13 @@
       "judge_miss": 0,
       "empty": 0
     },
-    "loop_onset_words_p50": 55,
-    "loop_onset_words_p90": 155
+    "at_cap_but_answered_looping": 30,
+    "unit": "tokens",
+    "loop_onset_p50": 74,
+    "loop_onset_p90": 239,
+    "answer_position_p50": 313,
+    "answer_position_p99": 752,
+    "answer_position_max": 899
   },
   {
     "dir": "eval/traj/4b_it_full/step-128",
@@ -572,8 +727,13 @@
       "judge_miss": 4,
       "empty": 0
     },
-    "loop_onset_words_p50": 18,
-    "loop_onset_words_p90": 64
+    "at_cap_but_answered_looping": 45,
+    "unit": "tokens",
+    "loop_onset_p50": 24,
+    "loop_onset_p90": 84,
+    "answer_position_p50": 173,
+    "answer_position_p99": 771,
+    "answer_position_max": 1008
   },
   {
     "dir": "eval/traj/4b_it_full/step-128",
@@ -590,8 +750,13 @@
       "judge_miss": 0,
       "empty": 0
     },
-    "loop_onset_words_p50": 0,
-    "loop_onset_words_p90": 0
+    "at_cap_but_answered_looping": 1,
+    "unit": "tokens",
+    "loop_onset_p50": 0,
+    "loop_onset_p90": 0,
+    "answer_position_p50": 131,
+    "answer_position_p99": 432,
+    "answer_position_max": 586
   },
   {
     "dir": "eval/traj/4b_it_full/step-256",
@@ -608,8 +773,13 @@
       "judge_miss": 1,
       "empty": 0
     },
-    "loop_onset_words_p50": 59,
-    "loop_onset_words_p90": 134
+    "at_cap_but_answered_looping": 23,
+    "unit": "tokens",
+    "loop_onset_p50": 78,
+    "loop_onset_p90": 201,
+    "answer_position_p50": 213,
+    "answer_position_p99": 589,
+    "answer_position_max": 892
   },
   {
     "dir": "eval/traj/4b_it_full/step-256",
@@ -626,8 +796,13 @@
       "judge_miss": 9,
       "empty": 0
     },
-    "loop_onset_words_p50": 20,
-    "loop_onset_words_p90": 72
+    "at_cap_but_answered_looping": 97,
+    "unit": "tokens",
+    "loop_onset_p50": 25,
+    "loop_onset_p90": 90,
+    "answer_position_p50": 138,
+    "answer_position_p99": 546,
+    "answer_position_max": 831
   },
   {
     "dir": "eval/traj/4b_it_full/step-256",
@@ -644,8 +819,13 @@
       "judge_miss": 0,
       "empty": 0
     },
-    "loop_onset_words_p50": 25,
-    "loop_onset_words_p90": 25
+    "at_cap_but_answered_looping": 0,
+    "unit": "tokens",
+    "loop_onset_p50": 32,
+    "loop_onset_p90": 32,
+    "answer_position_p50": 120,
+    "answer_position_p99": 379,
+    "answer_position_max": 468
   },
   {
     "dir": "eval/traj/4b_it_full/step-512",
@@ -662,8 +842,13 @@
       "judge_miss": 0,
       "empty": 0
     },
-    "loop_onset_words_p50": 35,
-    "loop_onset_words_p90": 102
+    "at_cap_but_answered_looping": 99,
+    "unit": "tokens",
+    "loop_onset_p50": 47,
+    "loop_onset_p90": 132,
+    "answer_position_p50": 148,
+    "answer_position_p99": 552,
+    "answer_position_max": 884
   },
   {
     "dir": "eval/traj/4b_it_full/step-512",
@@ -680,8 +865,13 @@
       "judge_miss": 6,
       "empty": 0
     },
-    "loop_onset_words_p50": 18,
-    "loop_onset_words_p90": 62
+    "at_cap_but_answered_looping": 453,
+    "unit": "tokens",
+    "loop_onset_p50": 24,
+    "loop_onset_p90": 87,
+    "answer_position_p50": 46,
+    "answer_position_p99": 347,
+    "answer_position_max": 789
   },
   {
     "dir": "eval/traj/4b_it_full/step-512",
@@ -698,8 +888,13 @@
       "judge_miss": 0,
       "empty": 0
     },
-    "loop_onset_words_p50": 0,
-    "loop_onset_words_p90": 0
+    "at_cap_but_answered_looping": 0,
+    "unit": "tokens",
+    "loop_onset_p50": 0,
+    "loop_onset_p90": 0,
+    "answer_position_p50": 104,
+    "answer_position_p99": 349,
+    "answer_position_max": 398
   },
   {
     "dir": "eval/traj/4b_it_full/step-1024",
@@ -716,8 +911,13 @@
       "judge_miss": 0,
       "empty": 0
     },
-    "loop_onset_words_p50": 38,
-    "loop_onset_words_p90": 100
+    "at_cap_but_answered_looping": 18,
+    "unit": "tokens",
+    "loop_onset_p50": 45,
+    "loop_onset_p90": 117,
+    "answer_position_p50": 103,
+    "answer_position_p99": 560,
+    "answer_position_max": 625
   },
   {
     "dir": "eval/traj/4b_it_full/step-1024",
@@ -734,8 +934,13 @@
       "judge_miss": 0,
       "empty": 0
     },
-    "loop_onset_words_p50": 21,
-    "loop_onset_words_p90": 67
+    "at_cap_but_answered_looping": 198,
+    "unit": "tokens",
+    "loop_onset_p50": 27,
+    "loop_onset_p90": 88,
+    "answer_position_p50": 36,
+    "answer_position_p99": 277,
+    "answer_position_max": 470
   },
   {
     "dir": "eval/traj/4b_it_full/step-1024",
@@ -752,8 +957,13 @@
       "judge_miss": 0,
       "empty": 0
     },
-    "loop_onset_words_p50": 26,
-    "loop_onset_words_p90": 72
+    "at_cap_but_answered_looping": 2,
+    "unit": "tokens",
+    "loop_onset_p50": 31,
+    "loop_onset_p90": 98,
+    "answer_position_p50": 21,
+    "answer_position_p99": 238,
+    "answer_position_max": 642
   },
   {
     "dir": "eval/traj/4b_it_full/step-2048",
@@ -770,8 +980,13 @@
       "judge_miss": 0,
       "empty": 0
     },
-    "loop_onset_words_p50": 36,
-    "loop_onset_words_p90": 79
+    "at_cap_but_answered_looping": 72,
+    "unit": "tokens",
+    "loop_onset_p50": 48,
+    "loop_onset_p90": 102,
+    "answer_position_p50": 106,
+    "answer_position_p99": 517,
+    "answer_position_max": 561
   },
   {
     "dir": "eval/traj/4b_it_full/step-2048",
@@ -788,8 +1003,13 @@
       "judge_miss": 1,
       "empty": 0
     },
-    "loop_onset_words_p50": 19,
-    "loop_onset_words_p90": 54
+    "at_cap_but_answered_looping": 283,
+    "unit": "tokens",
+    "loop_onset_p50": 26,
+    "loop_onset_p90": 76,
+    "answer_position_p50": 35,
+    "answer_position_p99": 215,
+    "answer_position_max": 420
   },
   {
     "dir": "eval/traj/4b_it_full/step-2048",
@@ -806,8 +1026,13 @@
       "judge_miss": 0,
       "empty": 0
     },
-    "loop_onset_words_p50": 3,
-    "loop_onset_words_p90": 30
+    "at_cap_but_answered_looping": 2,
+    "unit": "tokens",
+    "loop_onset_p50": 4,
+    "loop_onset_p90": 44,
+    "answer_position_p50": 23,
+    "answer_position_p99": 113,
+    "answer_position_max": 342
   },
   {
     "dir": "eval/traj/4b_it_full/step-4096",
@@ -824,8 +1049,13 @@
       "judge_miss": 0,
       "empty": 0
     },
-    "loop_onset_words_p50": 52,
-    "loop_onset_words_p90": 93
+    "at_cap_but_answered_looping": 28,
+    "unit": "tokens",
+    "loop_onset_p50": 74,
+    "loop_onset_p90": 113,
+    "answer_position_p50": 182,
+    "answer_position_p99": 614,
+    "answer_position_max": 726
   },
   {
     "dir": "eval/traj/4b_it_full/step-4096",
@@ -842,8 +1072,13 @@
       "judge_miss": 4,
       "empty": 0
     },
-    "loop_onset_words_p50": 27,
-    "loop_onset_words_p90": 81
+    "at_cap_but_answered_looping": 251,
+    "unit": "tokens",
+    "loop_onset_p50": 35,
+    "loop_onset_p90": 105,
+    "answer_position_p50": 54,
+    "answer_position_p99": 333,
+    "answer_position_max": 609
   },
   {
     "dir": "eval/traj/4b_it_full/step-4096",
@@ -860,8 +1095,13 @@
       "judge_miss": 0,
       "empty": 0
     },
-    "loop_onset_words_p50": 41,
-    "loop_onset_words_p90": 41
+    "at_cap_but_answered_looping": 2,
+    "unit": "tokens",
+    "loop_onset_p50": 43,
+    "loop_onset_p90": 43,
+    "answer_position_p50": 22,
+    "answer_position_p99": 113,
+    "answer_position_max": 132
   },
   {
     "dir": "eval/traj/4b_it_full/step-4882",
@@ -878,8 +1118,13 @@
       "judge_miss": 0,
       "empty": 0
     },
-    "loop_onset_words_p50": 62,
-    "loop_onset_words_p90": 99
+    "at_cap_but_answered_looping": 27,
+    "unit": "tokens",
+    "loop_onset_p50": 82,
+    "loop_onset_p90": 163,
+    "answer_position_p50": 211,
+    "answer_position_p99": 633,
+    "answer_position_max": 790
   },
   {
     "dir": "eval/traj/4b_it_full/step-4882",
@@ -896,8 +1141,13 @@
       "judge_miss": 1,
       "empty": 0
     },
-    "loop_onset_words_p50": 26,
-    "loop_onset_words_p90": 74
+    "at_cap_but_answered_looping": 237,
+    "unit": "tokens",
+    "loop_onset_p50": 35,
+    "loop_onset_p90": 104,
+    "answer_position_p50": 54,
+    "answer_position_p99": 418,
+    "answer_position_max": 842
   },
   {
     "dir": "eval/traj/4b_it_full/step-4882",
@@ -914,8 +1164,13 @@
       "judge_miss": 0,
       "empty": 0
     },
-    "loop_onset_words_p50": 13,
-    "loop_onset_words_p90": 51
+    "at_cap_but_answered_looping": 1,
+    "unit": "tokens",
+    "loop_onset_p50": 18,
+    "loop_onset_p90": 86,
+    "answer_position_p50": 23,
+    "answer_position_p99": 110,
+    "answer_position_max": 212
   },
   {
     "dir": "eval/traj/1b_it_full_v3/step-4882",
@@ -932,8 +1187,13 @@
       "judge_miss": 0,
       "empty": 0
     },
-    "loop_onset_words_p50": 27,
-    "loop_onset_words_p90": 68
+    "at_cap_but_answered_looping": 59,
+    "unit": "tokens",
+    "loop_onset_p50": 36,
+    "loop_onset_p90": 84,
+    "answer_position_p50": 61,
+    "answer_position_p99": 609,
+    "answer_position_max": 925
   },
   {
     "dir": "eval/traj/1b_it_full_v3/step-4882",
@@ -950,8 +1210,13 @@
       "judge_miss": 2,
       "empty": 0
     },
-    "loop_onset_words_p50": 20,
-    "loop_onset_words_p90": 62
+    "at_cap_but_answered_looping": 373,
+    "unit": "tokens",
+    "loop_onset_p50": 26,
+    "loop_onset_p90": 78,
+    "answer_position_p50": 18,
+    "answer_position_p99": 179,
+    "answer_position_max": 814
   },
   {
     "dir": "eval/traj/1b_it_full_v3/step-4882",
@@ -968,8 +1233,13 @@
       "judge_miss": 0,
       "empty": 0
     },
-    "loop_onset_words_p50": 19,
-    "loop_onset_words_p90": 67
+    "at_cap_but_answered_looping": 5,
+    "unit": "tokens",
+    "loop_onset_p50": 24,
+    "loop_onset_p90": 83,
+    "answer_position_p50": 45,
+    "answer_position_p99": 169,
+    "answer_position_max": 315
   },
   {
     "dir": "eval/traj/270m_it_full/step-4882",
@@ -986,8 +1256,13 @@
       "judge_miss": 2,
       "empty": 0
     },
-    "loop_onset_words_p50": 23,
-    "loop_onset_words_p90": 91
+    "at_cap_but_answered_looping": 22,
+    "unit": "tokens",
+    "loop_onset_p50": 35,
+    "loop_onset_p90": 144,
+    "answer_position_p50": 334,
+    "answer_position_p99": 860,
+    "answer_position_max": 991
   },
   {
     "dir": "eval/traj/270m_it_full/step-4882",
@@ -1004,8 +1279,13 @@
       "judge_miss": 11,
       "empty": 0
     },
-    "loop_onset_words_p50": 9,
-    "loop_onset_words_p90": 39
+    "at_cap_but_answered_looping": 175,
+    "unit": "tokens",
+    "loop_onset_p50": 13,
+    "loop_onset_p90": 54,
+    "answer_position_p50": 159,
+    "answer_position_p99": 468,
+    "answer_position_max": 845
   },
   {
     "dir": "eval/traj/270m_it_full/step-4882",
@@ -1022,7 +1302,12 @@
       "judge_miss": 0,
       "empty": 0
     },
-    "loop_onset_words_p50": 14,
-    "loop_onset_words_p90": 64
+    "at_cap_but_answered_looping": 120,
+    "unit": "tokens",
+    "loop_onset_p50": 18,
+    "loop_onset_p90": 85,
+    "answer_position_p50": 249,
+    "answer_position_p99": 1018,
+    "answer_position_max": 1018
   }
 ]

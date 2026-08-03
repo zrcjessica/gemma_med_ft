@@ -68,17 +68,31 @@ def uniq_shingle_ratio(text: str, n: int = 8, tail_words: int = 300) -> float:
     return len(set(sh)) / len(sh)
 
 
-def loop_onset_words(text: str, n: int = 8) -> int | None:
-    """Word index where the first repeated 8-gram was first seen -- i.e. where
-    the model derailed. If that is far below the cap, no token budget saves it."""
+def loop_onset(text: str, tok, n: int = 8) -> int | None:
+    """Where the first repeated 8-gram was first seen -- i.e. where the model
+    derailed. If that is far below the cap, no token budget saves it."""
     w = re.sub(r"\d+", "#", text).split()
     seen: dict[str, int] = {}
     for i in range(len(w) - n + 1):
         s = " ".join(w[i : i + n])
         if s in seen:
-            return seen[s]
+            return measure(" ".join(text.split()[: seen[s]]), tok)
         seen[s] = i
     return None
+
+
+def answer_position(text: str, tok) -> int | None:
+    """Where the response finally commits, so it can be read against the cap.
+    The LAST match, since the models restate the answer line after reasoning."""
+    m = None
+    for m in ANSWER_RE.finditer(text):
+        pass
+    return measure(text[: m.start()], tok) if m else None
+
+
+def measure(text: str, tok) -> int:
+    """Tokens if a tokenizer was found, words otherwise. Units are reported."""
+    return len(tok.encode(text, add_special_tokens=False).ids) if tok else len(text.split())
 
 
 def classify(out: str, at_cap: bool, loop_thresh: float) -> str:
@@ -117,24 +131,38 @@ def load_dir(d: Path, bench: str, tok, max_new: int):
 
 
 def analyse(d: Path, bench: str, tok, args):
-    n = capped = capped_answered = 0
+    n = capped = capped_answered = capped_answered_loop = 0
     un = Counter()
     onsets: list[int] = []
+    ans_pos: list[int] = []
     ex: dict[str, tuple] = {}
     for j, out, at_cap in load_dir(d, bench, tok, args.max_new_tokens):
         n += 1
         capped += at_cap
         if j["answered"]:
             capped_answered += at_cap
+            capped_answered_loop += at_cap and uniq_shingle_ratio(out) < args.loop_threshold
+            p = answer_position(out, tok)
+            if p is not None:
+                ans_pos.append(p)
             continue
         k = classify(out, at_cap, args.loop_threshold)
         un[k] += 1
         ex.setdefault(k, (j["idx"], out))
         if k == "loop":
-            o = loop_onset_words(out)
+            o = loop_onset(out, tok)
             if o is not None:
                 onsets.append(o)
-    return dict(n=n, capped=capped, capped_answered=capped_answered, un=un, onsets=onsets, ex=ex)
+    return dict(
+        n=n,
+        capped=capped,
+        capped_answered=capped_answered,
+        capped_answered_loop=capped_answered_loop,
+        un=un,
+        onsets=onsets,
+        ans_pos=ans_pos,
+        ex=ex,
+    )
 
 
 def pct(v, q):
@@ -159,6 +187,7 @@ def main():
         from tokenizers import Tokenizer
 
         tok = Tokenizer.from_file(tpath)
+    unit = "tokens" if tok else "words"
 
     keys = [k for k, _ in BUCKETS]
     print(f"{'run':<30}{'bench':<9}{'n':>6}{'unans':>7}{'@cap':>6}{'@cap+ans':>9}  " + "".join(f"{k:>13}" for k in keys))
@@ -183,17 +212,28 @@ def main():
                     "at_cap": r["capped"],
                     "at_cap_but_answered": r["capped_answered"],
                     "buckets": {k: r["un"][k] for k in keys},
-                    "loop_onset_words_p50": pct(r["onsets"], 0.5),
-                    "loop_onset_words_p90": pct(r["onsets"], 0.9),
+                    "at_cap_but_answered_looping": r["capped_answered_loop"],
+                    "unit": unit,
+                    "loop_onset_p50": pct(r["onsets"], 0.5),
+                    "loop_onset_p90": pct(r["onsets"], 0.9),
+                    "answer_position_p50": pct(r["ans_pos"], 0.5),
+                    "answer_position_p99": pct(r["ans_pos"], 0.99),
+                    "answer_position_max": max(r["ans_pos"], default=0),
                 }
             )
             for k, v in r["ex"].items():
                 allex.setdefault((k, b), (tag,) + v)
 
-    print("\nloop onset (word index where the repeated span was first seen):")
+    print(
+        f"\nposition in {unit}. answered rows: where the response commits. "
+        f"loop rows: where it derailed. Cap is {args.max_new_tokens} tokens."
+    )
+    print(f"{'run':<40}{'bench':<9}{'answer p50':>11}{'p99':>6}{'max':>6}{'   loop onset p50':>18}{'p90':>6}")
     for r in rows:
-        if r["buckets"]["loop"]:
-            print(f"  {r['dir']:<45}{r['bench']:<9} p50={r['loop_onset_words_p50']:>5}  p90={r['loop_onset_words_p90']:>5}")
+        print(
+            f"{r['dir']:<40}{r['bench']:<9}{r['answer_position_p50']:>11}{r['answer_position_p99']:>6}"
+            f"{r['answer_position_max']:>6}{r['loop_onset_p50']:>18}{r['loop_onset_p90']:>6}"
+        )
 
     if args.json:
         Path(args.json).write_text(json.dumps(rows, indent=2))

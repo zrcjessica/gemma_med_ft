@@ -149,14 +149,16 @@ Consequences to keep in mind:
   `judge_self_disagreement` counts rows where those conflict. **It does not
   invalidate a run.** `_record` derives *both* `correct` and `answered` from
   `chosen`, never from `verdict`, so a mismatch changes no score — it is a
-  quality signal only. Measured on `4b_it_full` (2026-07-30): 0.2–0.5% at the
-  ends of the trajectory, peaking at 2.8% on step-64 medmcqa. Inspecting those
-  rows, ~73% are the same benign shape — the model emits long CoT that hits the
-  generation limit before naming an option, so the judge sets `chosen=none`
-  (correct) but labels the verdict `incorrect` rather than `no_answer`. It
-  tracks how rambly the *judged* model is, not how confused the judge is.
-  Investigate the rows before discarding anything; escalate only if the
-  disagreement is in `chosen`.
+  quality signal only. Measured on `4b_it_full` (2026-07-30): 0.95% over 83,384
+  rows, 0.2–0.5% at the ends. Of those 788 rows, 58% are `verdict=incorrect`
+  while `chosen` *is* gold (a slip in the free-text field; the scored field is
+  right), and 35% are the model explicitly rejecting every option — "Answer:
+  None of the above" — which the judge records as `chosen=none` but labels
+  `incorrect` rather than `no_answer`. Only **7 of 788 hit the token cap**, so
+  this does *not* track truncation; an earlier note here claiming ~73% were
+  truncated long CoT was wrong (`docs/BEHAVIORAL_EVAL.md` §9). Investigate the
+  rows before discarding anything; escalate only if the disagreement is in
+  `chosen`.
 - Judging is **resumable and idempotent** (keyed on item index). Price a run
   first with `--estimate`.
 - **Three providers.** `--provider anthropic` (Claude, `ANTHROPIC_API_KEY`) is
@@ -205,6 +207,21 @@ silently breaks the judge:
 - **The judge is an instrument — freeze it.** Same discipline as the frozen fit
   corpus and probe set: one judge model for a whole trajectory, recorded in
   `judged_summary.json`. Two judges' scores are not comparable.
+- **So are the decode settings.** `temperature=0.0`, `max_new_tokens=1024`,
+  `repetition_penalty=1.0` is the frozen config, now recorded in `summary.json`.
+  `--repetition-penalty` / `--seed` exist only for the decode probe
+  (`scripts/redecode_probe.sbatch`); its output lives in `eval/decode_probe/`
+  and may not be mixed into trajectory figures.
+
+## Unanswered ≠ truncated
+
+`answer_rate` lags MedGemma by ~7pp on MedMCQA, and the cause is **verbatim
+repetition loops under greedy decoding, not chain-of-thought running past the
+token cap**. At 4b step-4882, 311 of 327 unanswered MedMCQA rows are loops and 8
+are real truncation; the model derails at token p50=35 while answers, when they
+come, land by p99=418 — so a bigger cap recovers nothing. MedGemma loops on
+0.4% of rows, we loop on 13%. Bucket any eval dir with
+`scripts/analyze_unanswered.py`; full write-up in `docs/BEHAVIORAL_EVAL.md` §8.
 
 ## Run commands
 

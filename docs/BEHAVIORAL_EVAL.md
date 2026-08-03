@@ -71,7 +71,7 @@ shrinks the sample rather than announcing itself.
 ```
 
 The judge's own `verdict` string is recorded but never used arithmetically. This
-is why the self-disagreement diagnostic (§8) is a quality signal and not a
+is why the self-disagreement diagnostic (§9) is a quality signal and not a
 correctness bug.
 
 **The model's response is embedded untruncated.** Truncating to save money would
@@ -252,22 +252,173 @@ difference described above, not a bug.
 Regenerate this comparison with `scripts/compare_medgemma.py` →
 `eval/medgemma_comparison.json`, which also carries the 270m and 1b arms.
 
-## 8. Validity check: judge self-disagreement
+## 8. Why answer rate lags: repetition loops, not truncation
+
+§7 ends on a lever — recover the ~7pp of MedMCQA answer rate that MedGemma keeps
+and we lose. This section identifies what is actually consuming it, because the
+obvious hypothesis is wrong and the two candidates call for opposite fixes.
+
+The hypothesis was truncation: the model reasons at length, runs past
+`--max-new-tokens 1024`, and never reaches its answer line. That story is
+plausible, it was written into §9 as the explanation for the self-disagreement
+rows, and it is false for every fine-tuned checkpoint we have. **The generations are not
+unfinished reasoning; they are verbatim repetition loops** — the classic
+pathology of greedy decoding.
+
+### Method
+
+`scripts/analyze_unanswered.py` joins predictions to judgments and buckets every
+`answered=false` row. A row that ended at the token cap is a loop if the unique
+8-gram share of its last 300 words is below 0.6 (digits normalised, because the
+loops often present as an enumeration whose counter keeps climbing), and honest
+truncation otherwise. Full table: `eval/unanswered_causes.json`.
+
+### The result
+
+MedMCQA (n = 4,183), the benchmark carrying the shortfall:
+
+| Run | unanswered | **loop** | real truncation | literal `<letter>` | other |
+|---|---:|---:|---:|---:|---:|
+| `gemma-3-4b-it` (base) | 13 | **0** | 6 | 0 | 7 |
+| `medgemma-4b-it` | 17 | **14** | 2 | 0 | 1 |
+| ours, step-32 | 472 | **378** | 46 | 17 | 31 |
+| ours, step-512 | 453 | **437** | 3 | 5 | 8 |
+| ours, step-4882 | 327 | **311** | 8 | 1 | 7 |
+| `1b_it_full` step-4882 | 360 | **356** | 0 | 0 | 4 |
+| `270m_it_full` step-4882 | 1,425 | **1,038** | 5 | 318 | 64 |
+
+95% of our 4b's unanswered rows are loops. Eight are the thing we assumed all of
+them were.
+
+Two measurements make it decisive, both in tokens, both from the same script:
+
+**The answer, when it comes, comes early.** For answered rows at step-4882, the
+final `Answer:` line sits at token p50 = 54, p99 = 418, **max = 842** on MedMCQA
+(p99 = 633, max = 790 on MedQA) — every one inside the 1024 cap, with room. The
+cap is not binding on generations that behave.
+
+**The loop starts long before any cap.** For unanswered rows, the repeated span
+is first seen at token **p50 = 35, p90 = 104** (MedMCQA, step-4882). The model
+derails inside the first ~35 tokens and then repeats for the remaining ~990.
+Raising `--max-new-tokens` buys more of the same text.
+
+What the loops look like — three real step-512 generations:
+
+```
+The thyroid cartilage is attached to the cricoid cartilage by the thyroepiglottic ligament.  (x40)
+...not vulnerable to compression of the T39 nerve root. ...the T40 nerve root. ...the T41...
+Congenital heart disease 2. Congenital cataracts 3. Cleft lip ... 7. Leukemia 8. Leukemia ... 182. Leukemia
+```
+
+### Three consequences
+
+**The gap to MedGemma is a rate, not a mode.** MedGemma loops too — 14 of its 17
+MedMCQA misses are loops. It just does it ~20× less often. Rows running to the
+cap: base **0.2%**, `medgemma-4b-it` **0.4%**, ours at step-512 **21.4%**, at
+step-4882 **13.4%**. Our SFT induces the pathology; MedGemma's post-training
+does not.
+
+**Answer rate undercounts the problem.** Looping also hits rows the judge scores
+as *answered*: 243 of step-4882's MedMCQA rows end at the cap having already
+named an option (237 of those 243 are looping). Fine-tuning teaches the model to
+commit first — median answered MedQA output falls from 468 tokens at t=0 to 18
+at step-4882 — so a row survives whenever the answer lands before the derail.
+**`answer_rate` is measuring whether the loop started before or after the answer**,
+which is a noisier quantity than "did the model know the answer".
+
+**The base model's few failures really were truncation.** All 6 of
+`gemma-3-4b-it`'s MedQA misses are honest long CoT, and its answered rows commit
+at p99 = 716 / max = 973 — genuinely close to the cap. So the cap is near-binding
+for the *verbose base* and irrelevant for the *looping fine-tune*. Don't
+generalise one arm's failure mode to the others; that is the mistake this section
+corrects.
+
+### Secondary cause: the prompt's own placeholder
+
+`MCQ_SUFFIX` asks the model to end with `'Answer: <letter>'`, and the model
+sometimes emits that string verbatim rather than filling it in. Small and
+transient for 4b (113 MedMCQA rows at step-64, gone by step-512), but **318 of
+270m's 1,425 misses — 22%**. Rewording the suffix would fix it and would also
+break comparability with every generation produced so far (§13, rule 1 applies to
+the prompt as much as to the judge). Left frozen deliberately; noted here so the
+270m numbers are read with it in mind.
+
+### The open question, and the experiment for it
+
+Our eval decodes greedily (`temperature=0.0`) with no repetition penalty. Greedy
+decoding is where degenerate repetition is expected to live, so the live question
+is whether this shortfall is a property of *the model* or of *how we sample it* —
+and that changes how §6's `answer_rate` trace should be read against the lens.
+
+`scripts/redecode_probe.sbatch` settles it: one checkpoint (step-512, the worst
+point), a fixed 300-item slice of MedQA and MedMCQA, four decode settings,
+everything else held constant.
+
+| Arm | temperature | repetition_penalty |
+|---|---|---|
+| control | 0.0 | 1.00 |
+| | 0.0 | 1.05 |
+| | 0.0 | 1.10 |
+| | 0.7 | 1.00 |
+
+```bash
+sbatch --array=0-3 scripts/redecode_probe.sbatch              # BigPurple, ~1 A100-hour
+.venv-judge/bin/python -m gemma_med.judge --root eval/decode_probe/4b_step512 --mode sync
+.venv-probe/bin/python scripts/analyze_unanswered.py eval/decode_probe/4b_step512/*
+```
+
+If answer rate returns to ~99% under a repetition penalty, the remaining distance
+to MedGemma on MedMCQA is an artefact of our decoding, not lost capability.
+
+> **Decode settings are part of the instrument.** `temperature=0.0`,
+> `max_new_tokens=1024`, `repetition_penalty=1.0` is the frozen configuration and
+> the only one any published number may use; `evaluate.py` now records it in
+> `summary.json` for exactly this reason. The probe above lives in its own
+> `eval/decode_probe/` tree and its numbers may not be mixed into §6 or §7 —
+> same rule as regex-vs-judge (§13).
+
+Predictions written from this commit on also carry `finish_reason` and
+`n_gen_tokens`, so "did this response hit the cap?" is a field lookup. Older
+dirs, including everything above, are handled by re-tokenising.
+
+## 9. Validity check: judge self-disagreement
 
 `judge_self_disagreement` counts rows where the judge's
 `verdict` string conflicts with what its `chosen` implies. Across the 4b
 trajectory + baseline (83,384 items) it is **0.95% overall**, 0.2–0.5% at the
 ends, peaking at **3.0%** (step-128 medmcqa).
 
-This does **not** invalidate a run. Inspecting those rows, ~73% are one benign
-shape: the model emits long chain-of-thought, hits the generation limit before
-naming an option, and the judge sets `chosen=none` (correct) while labelling the
-verdict `incorrect` rather than `no_answer`. Since §3 shows both `correct` and
-`answered` derive from `chosen`, **zero metrics are affected**. It tracks how
-rambly the *judged* model is, not how confused the judge is. Escalate only if the
-disagreement appears in `chosen`.
+This does **not** invalidate a run: §3 shows both `correct` and `answered` derive
+from `chosen`, so a wrong `verdict` string changes **zero metrics**. Escalate only
+if the disagreement appears in `chosen`.
 
-## 9. Cost and wall-clock (measured)
+All 788 rows, by shape:
+
+| Shape | n | % |
+|---|---:|---:|
+| `verdict=incorrect` while `chosen` **is** the gold option | 460 | 58% |
+| `verdict=incorrect` while `chosen=none` | 274 | 35% |
+| `verdict=correct` while `chosen` is **not** the gold option | 54 | 7% |
+
+- The **274** are dominated (84%) by one clean shape: the model explicitly
+  rejects every option — *"…therefore there is no correct answer among the given
+  options. Answer: None of the above"*. The judge records `chosen=none`, which is
+  right, and then calls the verdict `incorrect` rather than `no_answer`. Both
+  labels are defensible for a response that committed to something not on the
+  list.
+- The **460** are a slip in the free-text `verdict` field only: in 92% the
+  model's own letter agrees with the judge's `chosen`, and `chosen` equals gold,
+  so the scored field is right and the string is wrong. The likeliest cause is
+  the judge reacting to faulty *reasoning* behind a correct *choice*, which §3's
+  "do not re-derive the medicine" instruction is meant to suppress. Not pinned
+  down; it is 0.55% of rows and affects nothing.
+
+**Earlier revisions of this section attributed ~73% of these to long
+chain-of-thought hitting the generation limit. That is wrong** — only **7 of 788
+(1%)** ended at the token cap. Truncation is not what this diagnostic tracks;
+§8 covers what actually happens at the cap.
+
+## 10. Cost and wall-clock (measured)
 
 | | |
 |---|---|
@@ -287,7 +438,7 @@ total.** Budget from a whole-corpus character count.
 Prompt caching does not help: the shared SYSTEM prompt is 423 tokens, below
 Haiku's 1024-token cache minimum.
 
-## 10. Running it
+## 11. Running it
 
 ```bash
 # from .venv-judge, on olab1. Key in .env (gitignored).
@@ -321,7 +472,7 @@ API — hence the only half-price offline path — and it is the judge of record
 result in this document was produced by any other provider. `--mode batch` on the
 non-batching providers is rejected, not silently downgraded.
 
-## 11. Coverage
+## 12. Coverage
 
 | Dir | Judged | Notes |
 |---|---|---|
@@ -343,7 +494,7 @@ arm would be judge-scored and two regex-scored, and §5 shows the two instrument
 diverge by up to 24pp precisely as a function of size and training step. The
 slide deck quarantines the regex-scored arms on their own slide for this reason.
 
-## 12. Standing rules
+## 13. Standing rules
 
 1. **The judge is an instrument — freeze it.** One judge model per trajectory,
    recorded in `judged_summary.json`. Same discipline as the frozen jlens fit
