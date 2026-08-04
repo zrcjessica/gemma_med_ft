@@ -18,7 +18,9 @@
 #   KIND        it | pt                        (default it)
 #   RUN_DIR     dir containing checkpoint-*/   (required unless CKPTS/BASE_ONLY set)
 #   CKPTS       explicit space-sep ckpt dirs   (optional; overrides RUN_DIR)
-#   BASE_ONLY   1 = fit t=0 only, no ckpts     (seeds .base_lens.pt for a fan-out)
+#   BASE_ONLY   1 = fit t=0 only, no ckpts     (seeds .base_lens.pt for a fan-out;
+#                                               implies --keep-base-lens, else the
+#                                               end-of-run cleanup deletes it)
 #   FIT_CORPUS  generic text, one seq per line (default data/jlens/fit_corpus.txt)
 #   PROBE_SET   category<TAB>prompt tsv        (default data/jlens/probe_set.tsv)
 #   OUT         output dir                     (default eval/jlens/<size>_<kind>)
@@ -100,6 +102,7 @@ ARGS=(--base-model "${BASE_MODEL}" --fit-corpus "${FIT_CORPUS}" --probe-set "${P
 [[ -n "${RUN_DIR:-}" ]] && ARGS+=(--run-dir "${RUN_DIR}")
 [[ -n "${CKPTS:-}" ]] && ARGS+=(--checkpoints ${CKPTS})
 [[ -n "${SAVE_LENSES:-}" ]] && ARGS+=(--save-lenses)
+[[ "${BASE_ONLY:-0}" == "1" || -n "${KEEP_BASE_LENS:-}" ]] && ARGS+=(--keep-base-lens)
 # 27b retains a full-depth graph over dim_batch replicas on top of 55G of
 # weights; drop DIM_BATCH if it OOMs (costs wall-clock, not accuracy).
 [[ -n "${DIM_BATCH:-}" ]] && ARGS+=(--dim-batch "${DIM_BATCH}")

@@ -60,6 +60,11 @@ def parse_args():
                    help="Write a resumable fit checkpoint every N prompts (0 disables).")
     p.add_argument("--fresh", action="store_true",
                    help="Discard any existing metrics.jsonl and refit from scratch.")
+    p.add_argument("--keep-base-lens", action="store_true",
+                   help="Keep .base_lens.pt after the run instead of deleting it as a "
+                        "resume artifact. Required when this run exists only to fit t=0 "
+                        "for a fan-out (scripts/fanout_jlens.sh), whose workers symlink "
+                        "that file as their drift baseline.")
     p.add_argument("--dtype", default="bfloat16", choices=["bfloat16", "float16", "float32"])
     p.add_argument("--device", default="cuda")
     p.add_argument("--wandb-project", default=None)
@@ -318,7 +323,8 @@ def main():
         fit_ckpt_dir.rmdir()
     except OSError:
         pass
-    base_lens_path.unlink(missing_ok=True)
+    if not args.keep_base_lens:
+        base_lens_path.unlink(missing_ok=True)
 
     log.info("wrote %s", metrics_path)
     if wb is not None:
