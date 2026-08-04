@@ -13,13 +13,17 @@
 # dirs that are NOT trajectories -- baselines, single checkpoints, reference
 # models -- and judges each with --pred-dir.
 #
-# Same server, same discovery, same idempotence: judged items are keyed by
-# benchmark index, so resubmitting after a timeout resumes rather than
-# re-judging. Keep the judge frozen across everything you intend to compare
-# (see CLAUDE.md) -- that is the whole reason this shares kimi_url.sh with
-# judge_traj.sbatch instead of taking its own endpoint.
+# Same PROVIDER toggle, same idempotence: judged items are keyed by benchmark
+# index, so resubmitting after a timeout resumes rather than re-judging. Keep the
+# judge frozen across everything you intend to compare (see CLAUDE.md) -- that is
+# the whole reason this shares _judge_provider.sh with judge_traj.sbatch instead
+# of resolving its own endpoint. A baseline judged by Claude and a trajectory
+# judged by Kimi do not belong in one figure, and nothing downstream can tell
+# except by reading judged_summary.json.
 #
 #   sbatch --export=ALL,DIRS="eval/gemma-3-1b-it-baseline eval/medgemma-4b-it" \
+#       scripts/judge_dirs.sbatch
+#   sbatch --export=ALL,PROVIDER=anthropic,DIRS="eval/medgemma-4b-it" \
 #       scripts/judge_dirs.sbatch
 #
 # Dirs are space-separated, absolute or relative to the repo root.
@@ -30,7 +34,6 @@ REPO_ROOT=/gpfs/data/oermannlab/users/zhouj14/gemma_med_ft
 cd "${REPO_ROOT}"
 
 : "${DIRS:?DIRS required (space-separated eval dirs holding *_predictions.jsonl)}"
-CONC=${CONC:-16}
 
 _notify_slack() {
     [[ -z "${SLACK_WEBHOOK_URL:-}" ]] && return 0
@@ -41,22 +44,15 @@ _notify_slack() {
     curl -s -X POST "${SLACK_WEBHOOK_URL}" \
         -H 'Content-Type: application/json' \
         -d @- <<JSON || true
-{"attachments":[{"color":"${color}","title":"Slurm: judge-dirs — ${status}","fields":[{"title":"Job ID","value":"${SLURM_JOB_ID}","short":true},{"title":"Partition","value":"${SLURM_JOB_PARTITION:-?}","short":true},{"title":"Node","value":"$(hostname)","short":true},{"title":"Elapsed","value":"${elapsed}m","short":true},{"title":"Dirs","value":"${DIRS}","short":false},{"title":"Judge","value":"${JUDGE_MODEL:-?} @ ${JUDGE_BASE_URL:-?}","short":false}]}]}
+{"attachments":[{"color":"${color}","title":"Slurm: judge-dirs (${PROVIDER:-?}) — ${status}","fields":[{"title":"Job ID","value":"${SLURM_JOB_ID}","short":true},{"title":"Partition","value":"${SLURM_JOB_PARTITION:-?}","short":true},{"title":"Node","value":"$(hostname)","short":true},{"title":"Elapsed","value":"${elapsed}m","short":true},{"title":"Dirs","value":"${DIRS}","short":false},{"title":"Judge","value":"${PROVIDER:-?}/${JUDGE_MODEL:-?} @ ${JUDGE_BASE_URL:-?}","short":false}]}]}
 JSON
 }
 trap '_notify_slack $?' EXIT
 
-# Discover, never hardcode -- the server's node moves when its job restarts.
-if [[ -z "${JUDGE_BASE_URL:-}" ]]; then
-    JUDGE_BASE_URL=$(bash scripts/kimi_url.sh 2>/dev/null)
-    [[ -z "${JUDGE_BASE_URL}" ]] && { echo "no live Kimi server found" >&2; exit 1; }
-fi
-export JUDGE_BASE_URL
-JUDGE_MODEL=${JUDGE_MODEL:-$(curl -s --max-time 10 "${JUDGE_BASE_URL}/models" \
-    -H 'Authorization: Bearer dummy' \
-    | python3 -c 'import json,sys; print(json.load(sys.stdin)["data"][0]["id"])')}
+source scripts/_judge_provider.sh
 
 echo "=== judge-dirs ==="
+echo "provider: ${PROVIDER} (${MODE})"
 echo "endpoint: ${JUDGE_BASE_URL}"
 echo "model:    ${JUDGE_MODEL}"
 
@@ -75,14 +71,7 @@ for d in ${DIRS}; do
         rc=1
         continue
     fi
-    python -m gemma_med.judge \
-        --pred-dir "${d}" \
-        --provider local \
-        --model "${JUDGE_MODEL}" \
-        --mode sync \
-        --concurrency "${CONC}" \
-        ${LIMIT:+--limit ${LIMIT}} \
-        ${BENCHMARKS:+--benchmarks ${BENCHMARKS}} || { echo "  FAILED: ${d}" >&2; rc=1; }
+    judge_run --pred-dir "${d}" || { echo "  FAILED: ${d}" >&2; rc=1; }
 done
 
 echo "=== Finished: $(date -Is) (rc=${rc}) ==="

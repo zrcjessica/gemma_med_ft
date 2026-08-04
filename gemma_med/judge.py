@@ -57,12 +57,16 @@ Usage. Price it first, then judge:
     python -m gemma_med.judge --root eval/traj/<tag> --provider moonshot --mode sync
 
     # Self-hosted Kimi, from a compute node (submit, do not run on the login node):
-    sbatch --export=ALL,TAG=<tag> scripts/judge_traj.sbatch
+    sbatch --export=ALL,TAG=<tag> scripts/judge_traj.sbatch          # PROVIDER=local, the default
+    sbatch --export=ALL,TAG=<tag>,PROVIDER=anthropic scripts/judge_traj.sbatch
 
 Whichever you pick, freeze it: the judge is part of the measurement apparatus,
 like the frozen fit corpus and probe set on the lens side. Scores from two judges
 are not comparable, so a trajectory must be judged end to end by one model, and
-`judged_summary.json` records which one.
+`judged_summary.json` records which one. That record is also enforced: pointing a
+different provider/model at a directory that already holds judgments is refused
+unless `--allow-judge-switch`, because the resulting file would be half one
+judge's verdicts and half the other's with only the second one named.
 
 Over a whole trajectory that is one batch per (checkpoint, benchmark), each
 polled to completion in turn -- fine overnight, slow if you are watching. To
@@ -384,6 +388,45 @@ def load_rows(pred_path: Path, bench: str, limit: int | None) -> list[dict]:
     return out
 
 
+def prior_judge(d: Path) -> str | None:
+    """provider/model that last wrote into this dir, or None if it is fresh."""
+    sp = d / "judged_summary.json"
+    if not sp.exists():
+        return None
+    try:
+        s = json.loads(sp.read_text())
+    except json.JSONDecodeError:
+        return None
+    p, m = s.get("judge_provider"), s.get("judge_model")
+    return f"{p or '?'}/{m or '?'}" if (p or m) else None
+
+
+def check_judge(d: Path, args) -> str | None:
+    """Refuse to append a second judge's verdicts to a directory.
+
+    The two providers are a toggle by design, but the toggle is per *run*, not
+    per row: `judged_summary.json` names one judge for the whole dir, so a dir
+    judged half by Claude and half by Kimi reports scores from an instrument that
+    does not exist. Judgments are keyed by index and resumable, which is exactly
+    what makes the mistake easy -- a re-run with the other provider silently
+    fills in only the rows the first one missed.
+    """
+    was = prior_judge(d)
+    now = f"{args.provider}/{args.model}"
+    if was is None or was == now or args.estimate:
+        return None
+    if not args.allow_judge_switch:
+        sys.exit(
+            f"{d}: already judged by {was}, but this run is {now}.\n"
+            "Two judges' scores are not comparable and judging is resumable, so this "
+            "would leave one file holding both. Either re-run with the original judge, "
+            f"or delete {d.name}/*_judgments.jsonl and re-judge the dir from scratch, "
+            "or pass --allow-judge-switch if you really mean to mix them."
+        )
+    print(f"  WARNING: {d.name} was judged by {was}; mixing in {now}", file=sys.stderr)
+    return was
+
+
 def done_idxs(out_path: Path) -> set[int]:
     """Judged rows, so an interrupted run resumes instead of re-paying."""
     if not out_path.exists():
@@ -620,6 +663,25 @@ def judge_dir(judge, d: Path, args) -> dict:
     return out
 
 
+def load_dotenv(path: Path | None = None) -> None:
+    """Read repo-root `.env` into the environment, without overriding it.
+
+    Only so that toggling `--provider anthropic` does not also mean remembering
+    to `export ANTHROPIC_API_KEY` in whatever shell (or Slurm job) this is. A
+    real exported value always wins, so `.env` cannot silently swap a key out
+    from under a run that set one deliberately.
+    """
+    p = path or Path(__file__).resolve().parent.parent / ".env"
+    if not p.exists():
+        return
+    for line in p.read_text().splitlines():
+        line = line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        k, v = line.split("=", 1)
+        os.environ.setdefault(k.strip(), v.strip().strip("'\""))
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     src = ap.add_mutually_exclusive_group(required=True)
@@ -628,10 +690,11 @@ def main():
     ap.add_argument("--benchmarks", nargs="+", default=list(BENCHMARKS), choices=list(BENCHMARKS))
     ap.add_argument(
         "--provider",
-        default="anthropic",
+        default=os.environ.get("JUDGE_PROVIDER", "anthropic"),
         choices=list(PROVIDERS),
         help="anthropic (Claude API, batchable) | moonshot (Kimi hosted API) | "
-        "local (self-hosted vLLM, e.g. the lab Kimi on BigPurple)",
+        "local (self-hosted vLLM, e.g. the lab Kimi on BigPurple). "
+        "Defaults to $JUDGE_PROVIDER, else anthropic.",
     )
     ap.add_argument(
         "--base-url",
@@ -641,7 +704,13 @@ def main():
         "scripts/kimi_url.sh rather than hardcoding.",
     )
     ap.add_argument("--model", default=None, help="Defaults to the provider's judge model")
-    ap.add_argument("--mode", default="batch", choices=["batch", "sync"], help="batch is half price")
+    ap.add_argument(
+        "--mode",
+        default=None,
+        choices=["batch", "sync"],
+        help="batch is half price. Defaults to batch on providers that have a Batches "
+        "API and sync on those that do not, so switching provider is one variable.",
+    )
     ap.add_argument("--concurrency", type=int, default=8, help="sync mode only")
     ap.add_argument(
         "--no-wait",
@@ -651,8 +720,15 @@ def main():
     )
     ap.add_argument("--limit", type=int, default=None, help="Judge only the first N items (smoke test)")
     ap.add_argument("--estimate", action="store_true", help="Price the run with count_tokens; judge nothing")
+    ap.add_argument(
+        "--allow-judge-switch",
+        action="store_true",
+        help="Judge a dir that was already judged by a different provider/model. Off by "
+        "default: the result is one file holding two judges' verdicts.",
+    )
     args = ap.parse_args()
 
+    load_dotenv()
     cls, default_model, key_env = PROVIDERS[args.provider]
     args.model = args.model or default_model
 
@@ -664,6 +740,11 @@ def main():
             f"--provider {args.provider} publishes no Batches API; re-run with --mode sync "
             "(there is no half-price offline path there)."
         )
+    # An *explicit* --mode batch on a sync-only provider is an error above, never
+    # a silent downgrade. Resolving the unset default per provider is a different
+    # thing: nothing was requested, so nothing is being overridden.
+    if args.mode is None:
+        args.mode = "batch" if cls.supports_batch else "sync"
 
     # key_env is None for a self-hosted server, which authenticates nothing.
     have_key = (
@@ -678,8 +759,12 @@ def main():
     except ImportError as e:
         sys.exit(f"{e} -- run scripts/build_judge_env.sh and use .venv-judge/bin/python")
 
+    # Always name the judge, on every provider: with a toggle in play, "which
+    # instrument produced these numbers" must be answerable from the log alone.
+    where = f" @ {judge.base_url}" if hasattr(judge, "base_url") else ""
+    print(f"judge: {args.provider} {args.model}{where} ({args.mode})")
+
     if hasattr(judge, "base_url"):
-        print(f"judge: {args.provider} {args.model} @ {judge.base_url}")
         try:
             judge.client.models.list()
         except Exception as e:  # noqa: BLE001
@@ -699,14 +784,15 @@ def main():
         sys.exit("no eval dirs found")
 
     for d in dirs:
+        mixed = check_judge(d, args)
         res = judge_dir(judge, d, args)
         if res and not args.estimate:
-            sp = d / "judged_summary.json"
-            sp.write_text(
-                json.dumps(
-                    {"judge_provider": args.provider, "judge_model": args.model, "results": res}, indent=2
-                )
-            )
+            summary = {"judge_provider": args.provider, "judge_model": args.model, "results": res}
+            if mixed:
+                # A dir that survived --allow-judge-switch must say so, or the
+                # only trace of the mixing is a shell history nobody kept.
+                summary["judge_mixed_with"] = mixed
+            (d / "judged_summary.json").write_text(json.dumps(summary, indent=2))
 
 
 if __name__ == "__main__":

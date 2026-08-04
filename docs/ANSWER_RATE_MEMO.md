@@ -22,7 +22,9 @@ wrong.
 ## What is actually happening
 
 Bucketing every judged `answered=false` row by cause
-(`scripts/analyze_unanswered.py`), MedMCQA, n = 4,183:
+(`scripts/analyze_unanswered.py`). MedMCQA, all 4,183 items of the eval set per
+run; the `unanswered` column is how many of those 4,183 the judge scored
+`answered=false`, and the two right-hand columns break that column down:
 
 | Run | unanswered | **repetition loop** | real truncation |
 |---|---:|---:|---:|

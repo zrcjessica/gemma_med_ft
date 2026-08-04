@@ -172,7 +172,8 @@ Consequences to keep in mind:
   items (45.0 vs 46.3 acc_raw on 300 medqa rows at 4b step-1024), so the
   freeze-the-judge rule is about reproducibility, not about either being wrong.
   `--mode batch` on the non-batching providers is rejected, not silently
-  downgraded.
+  downgraded (an *unset* `--mode` resolves per provider — batch where there is a
+  Batches API, sync where there isn't — so switching provider is one variable).
   Hosted Kimi is reached via `api.moonshot.ai/v1`, **not** its
   Anthropic-compatible endpoint: that one speaks OpenAI's `response_format`, not
   Anthropic's `output_config`, so pointing the `anthropic` SDK at it would drop
@@ -206,7 +207,14 @@ silently breaks the judge:
 
 - **The judge is an instrument — freeze it.** Same discipline as the frozen fit
   corpus and probe set: one judge model for a whole trajectory, recorded in
-  `judged_summary.json`. Two judges' scores are not comparable.
+  `judged_summary.json`. Two judges' scores are not comparable. **Switching
+  providers is a per-run toggle, never a per-dir one**: `PROVIDER=<local|
+  anthropic>` on `scripts/judge.sh` (olab1) and on both judge sbatch scripts,
+  which share `scripts/_judge_provider.sh` for endpoint discovery, mode, and the
+  batch submit→collect→sweep passes. Judging is resumable, so pointing the other
+  provider at an already-judged dir would quietly fill only the missing rows —
+  `judge.py` refuses unless `--allow-judge-switch`, and records
+  `judge_mixed_with` in the summary when you insist.
 - **So are the decode settings.** `temperature=0.0`, `max_new_tokens=1024`,
   `repetition_penalty=1.0` is the frozen config, now recorded in `summary.json`.
   `--repetition-penalty` / `--seed` exist only for the decode probe
@@ -236,24 +244,26 @@ no capability appears, it was never missing. The frozen config is still
 # Train one arm with log-spaced checkpoints (from .venv, via Slurm)
 sbatch --gres=gpu:a100:2 --export=ALL,SIZE=1b,KIND=it,LR=1e-5 scripts/train_med.sbatch
 
-# Score a finished trajectory (from .venv-judge, on olab1; batch = half price)
-export ANTHROPIC_API_KEY=...
-python -m gemma_med.judge --root eval/traj/1b_it_full_v3 --estimate   # price it first
-python -m gemma_med.judge --root eval/traj/1b_it_full_v3             # then judge
-python -m gemma_med.judge --pred-dir eval/gemma-3-1b-it-baseline --mode sync --limit 50
+# Price a trajectory before judging it (always)
+python -m gemma_med.judge --root eval/traj/1b_it_full_v3 --estimate
 
-# Judge a whole trajectory with Claude, batch mode (~$32, ~11 min, on olab1).
-# Two passes on purpose: without --no-wait, batch mode polls each batch to
-# completion before creating the next, serialising ~42 batches behind each other.
-export ANTHROPIC_API_KEY=...          # or put it in .env (gitignored)
+# Judge with Claude (default; ~$32, ~11 min per trajectory, on olab1).
+# The key comes from .env automatically; scripts/judge.sh does the batch
+# submit-all -> collect -> sync-sweep passes, all three of which are load-bearing.
+scripts/judge.sh --root eval/traj/4b_it_full
+scripts/judge.sh --pred-dir eval/gemma-3-1b-it-baseline
+
+# Same thing with the lab's self-hosted Kimi (free; BigPurple compute node only)
+scripts/kimi_url.sh                 # which node is serving right now
+PROVIDER=local scripts/judge.sh --root eval/traj/4b_it_full     # on a compute node
+sbatch --export=ALL,TAG=1b_it_full_v3 scripts/judge_traj.sbatch            # PROVIDER=local default
+sbatch --export=ALL,TAG=1b_it_full_v3,PROVIDER=anthropic scripts/judge_traj.sbatch
+sbatch --export=ALL,TAG=1b_it_full_v3,LIMIT=50 scripts/judge_traj.sbatch   # smoke test
+
+# The raw module still takes the same flags if you need one pass at a time
 python -m gemma_med.judge --root eval/traj/4b_it_full --mode batch --no-wait  # submit all
 python -m gemma_med.judge --root eval/traj/4b_it_full --mode batch           # collect
 python -m gemma_med.judge --root eval/traj/4b_it_full --mode sync            # sweep stragglers
-
-# Judge with the lab's self-hosted Kimi (free; BigPurple compute node only)
-scripts/kimi_url.sh                 # which node is serving right now
-sbatch --export=ALL,TAG=1b_it_full_v3 scripts/judge_traj.sbatch
-sbatch --export=ALL,TAG=1b_it_full_v3,LIMIT=50 scripts/judge_traj.sbatch   # smoke test
 
 # Probe a finished run's trajectory (from .venv-jlens, detached)
 sbatch --export=ALL,SIZE=1b,KIND=it,RUN_DIR=outputs/1b/full_lr1e-5_<jobid> \

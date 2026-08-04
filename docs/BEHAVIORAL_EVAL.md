@@ -275,7 +275,9 @@ truncation otherwise. Full table: `eval/unanswered_causes.json`.
 
 ### The result
 
-MedMCQA (n = 4,183), the benchmark carrying the shortfall:
+MedMCQA, the benchmark carrying the shortfall. Every run below evaluates the
+same 4,183 items; `unanswered` is the count of those scored `answered=false`,
+and the remaining columns partition it:
 
 | Run | unanswered | **loop** | real truncation | literal `<letter>` | other |
 |---|---:|---:|---:|---:|---:|
@@ -510,7 +512,29 @@ had 4 such items across three batches, picked up by the sweep.
 `anthropic` is supported for this study.** It is the sole provider with a Batches
 API — hence the only half-price offline path — and it is the judge of record; no
 result in this document was produced by any other provider. `--mode batch` on the
-non-batching providers is rejected, not silently downgraded.
+non-batching providers is rejected, not silently downgraded; an *unset* `--mode`
+resolves per provider (batch where there is a Batches API, sync where there is
+not), so the provider is the only variable that has to change.
+
+Switching is one env var, and the wrappers absorb the rest — endpoint discovery
+for the self-hosted server, the mode, and the three batch passes — via
+`scripts/_judge_provider.sh`:
+
+```bash
+scripts/judge.sh --root eval/traj/<tag>                  # anthropic (default here), on olab1
+PROVIDER=local scripts/judge.sh --root eval/traj/<tag>   # lab Kimi, compute node only
+sbatch --export=ALL,TAG=<tag>[,PROVIDER=anthropic] scripts/judge_traj.sbatch
+```
+
+**The toggle is per run, not per directory.** Judging is resumable and keyed by
+item index, so re-running an already-judged dir under the other provider would
+fill in only the rows the first judge missed and then label the whole file with
+the second judge — §5's instrument-divergence numbers are what that costs.
+`judge.py` refuses the switch unless you pass `--allow-judge-switch`, which
+records `judge_mixed_with` in `judged_summary.json` so the mixing is at least
+visible downstream. `PROVIDER=anthropic` reads `ANTHROPIC_API_KEY` from repo-root
+`.env` if it is not exported; `.env` is gitignored, so it is not on BigPurple
+unless you copied it there.
 
 ## 12. Coverage
 
