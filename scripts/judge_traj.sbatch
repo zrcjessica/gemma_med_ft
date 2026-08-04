@@ -36,17 +36,17 @@ REPO_ROOT=/gpfs/data/oermannlab/users/zhouj14/gemma_med_ft
 cd "${REPO_ROOT}"
 
 # --- Barney endpoint config -------------------------------------------------
-# Option A (recommended): edit barney.env and set your NetID (JUDGE_API_KEY).
-# The block below sources it; set -a exports the vars so kimi_url.sh and the
-# judge subprocess inherit them. No-op if barney.env is absent — behavior
-# unchanged.
+# barney.env ships working defaults (gateway port, NetID auto-detected from the
+# login name, concurrency), so there is nothing to edit. set -a exports the vars
+# so kimi_url.sh and the judge subprocess inherit them, and this runs before
+# _judge_provider.sh, which consumes KIMI_PORT and defaults CONC.
+#
+# Precedence: exported env / --export  >  barney.local.env (gitignored, personal)
+#   >  barney.env (tracked template). No-op if both files are absent.
 set -a
-[ -f barney.env ] && source barney.env
+[ -f barney.local.env ] && source barney.local.env
+[ -f barney.env ]       && source barney.env
 set +a
-# Option B: skip barney.env and hardcode here instead — uncomment + edit:
-# export KIMI_PORT=8001               # gateway (tracked) instead of raw serve (8000)
-# export JUDGE_API_KEY=your_netid     # your NetID = who usage logs under
-# CONC=20                             # concurrency (requests in flight)
 
 : "${TAG:?TAG required (eval/traj/<TAG>/)}"
 TRAJ=${TRAJ:-${REPO_ROOT}/eval/traj/${TAG}}
