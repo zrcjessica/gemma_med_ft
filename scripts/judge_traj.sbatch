@@ -26,10 +26,10 @@ REPO_ROOT=/gpfs/data/oermannlab/users/zhouj14/gemma_med_ft
 cd "${REPO_ROOT}"
 
 # --- Barney endpoint config -------------------------------------------------
-# Option A (recommended): copy barney.env.example -> barney.env and set your
-# NetID there. barney.env is gitignored, so your key stays off GitHub. The block
-# below sources it; set -a exports the vars so kimi_url.sh and the judge
-# subprocess inherit them. No-op if barney.env is absent — behavior unchanged.
+# Option A (recommended): edit barney.env and set your NetID (JUDGE_API_KEY).
+# The block below sources it; set -a exports the vars so kimi_url.sh and the
+# judge subprocess inherit them. No-op if barney.env is absent — behavior
+# unchanged.
 set -a
 [ -f barney.env ] && source barney.env
 set +a
