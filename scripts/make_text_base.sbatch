@@ -45,6 +45,12 @@ export HF_HOME=${HF_HOME:-/gpfs/data/oermannlab/users/yeb04/hf}
 export HF_HUB_OFFLINE=1
 export PYTHONUNBUFFERED=1
 
+# No compute happens here, but save_pretrained() -> accelerate.unwrap_model()
+# unconditionally imports deepspeed, whose op-builder aborts if CUDA_HOME is
+# unset. The path is on shared gpfs, so it resolves on CPU-only nodes too.
+module load cuda/12.6 2>/dev/null || true
+export CUDA_HOME=${CUDA_HOME:-/gpfs/share/apps/cuda/12.6}
+
 echo "=== make_text_base [job ${SLURM_JOB_ID}] ==="
 echo "Host: $(hostname)   Size: ${SIZE}-${KIND}   Out: ${OUT}"
 python -c "import transformers; print('transformers', transformers.__version__)"
