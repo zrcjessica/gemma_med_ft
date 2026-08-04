@@ -77,6 +77,9 @@ export HF_HOME=${HF_HOME:-/gpfs/data/oermannlab/users/yeb04/hf}
 export HF_HUB_OFFLINE=1
 export TOKENIZERS_PARALLELISM=false
 export PYTHONUNBUFFERED=1
+# The fit retains a full-depth graph, so the allocator sees many
+# different-sized blocks; expandable segments keep that from fragmenting.
+export PYTORCH_CUDA_ALLOC_CONF=${PYTORCH_CUDA_ALLOC_CONF:-expandable_segments:True}
 
 nvidia-smi --query-gpu=index,name,compute_mode,memory.used --format=csv,noheader
 
