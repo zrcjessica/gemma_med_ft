@@ -8,4 +8,5 @@ checkpoints/
 slurm/logs/
 wandb/
 .env
+barney.env
 eval/**/*_predictions.jsonl

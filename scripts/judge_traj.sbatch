@@ -25,6 +25,16 @@ set -euo pipefail
 REPO_ROOT=/gpfs/data/oermannlab/users/zhouj14/gemma_med_ft
 cd "${REPO_ROOT}"
 
+# --- Barney endpoint config (per-user, optional) ---------------------------
+# Copy barney.env.example -> barney.env and set your NetID. barney.env is
+# gitignored (your key stays off GitHub). Sets KIMI_PORT (8001 = tracked
+# gateway), JUDGE_API_KEY (your NetID = who usage logs under), and CONC (your
+# concurrency). set -a exports them so kimi_url.sh and the judge subprocess
+# inherit them. No-op if barney.env is absent — behavior is unchanged.
+set -a
+[ -f barney.env ] && source barney.env
+set +a
+
 : "${TAG:?TAG required (eval/traj/<TAG>/)}"
 TRAJ=${TRAJ:-${REPO_ROOT}/eval/traj/${TAG}}
 CONC=${CONC:-16}
