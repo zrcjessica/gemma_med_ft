@@ -34,6 +34,9 @@ TP=${TP:-1}
 # Unset -> evaluate.py's frozen default (rp=1.1). Set it only to match an
 # off-instrument trajectory, and suffix LABEL to match.
 RP=${RP:-}
+# Gemma 3 declares a 131072 window; 12b/27b cannot fit its KV cache next to the
+# weights on one 80GB card. Unset -> vLLM's default (what the small arms used).
+MAX_LEN=${MAX_LEN:-}
 
 _notify_slack() {
     [[ -z "${SLACK_WEBHOOK_URL:-}" ]] && return 0
@@ -83,6 +86,7 @@ python -m gemma_med.evaluate \
     --label "${LABEL}" \
     --tensor-parallel-size "${TP}" \
     ${RP:+--repetition-penalty ${RP}} \
+    ${MAX_LEN:+--max-model-len ${MAX_LEN}} \
     ${LIMIT:+--limit ${LIMIT}} \
     ${BENCHMARKS:+--benchmarks ${BENCHMARKS}}
 

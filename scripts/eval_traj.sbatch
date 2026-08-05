@@ -40,6 +40,9 @@ TP=${TP:-1}
 # to run a deliberately off-instrument trajectory, and give that TAG a suffix:
 # two repetition penalties are two instruments and may not share a figure.
 RP=${RP:-}
+# Gemma 3 declares a 131072 window; 12b/27b cannot fit its KV cache next to the
+# weights on one 80GB card. Unset -> vLLM's default (what the small arms used).
+MAX_LEN=${MAX_LEN:-}
 
 # Checkpoints sorted by step, same ordering the probe uses, so array index N
 # here and trajectory point N there refer to the same weights.
@@ -115,6 +118,7 @@ python -m gemma_med.evaluate \
     --label "${LABEL}" \
     --tensor-parallel-size "${TP}" \
     ${RP:+--repetition-penalty ${RP}} \
+    ${MAX_LEN:+--max-model-len ${MAX_LEN}} \
     ${LIMIT:+--limit ${LIMIT}} \
     ${BENCHMARKS:+--benchmarks ${BENCHMARKS}}
 

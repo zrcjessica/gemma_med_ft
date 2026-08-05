@@ -97,6 +97,14 @@ def main():
     ap.add_argument("--limit", type=int, default=None, help="Subsample for smoke tests.")
     ap.add_argument("--max-new-tokens", type=int, default=1024)
     ap.add_argument("--tensor-parallel-size", type=int, default=1)
+    # Gemma 3 declares a 131072 window. At 12b/27b the KV cache for one such
+    # request does not fit alongside the weights on an 80GB card and vLLM
+    # refuses to start. Nothing we send is anywhere near that long -- training
+    # used max_seq_len=2048 and generation is capped at --max-new-tokens -- so
+    # bounding the window costs nothing as long as it stays above
+    # longest_prompt + max_new_tokens. Left unset for the small arms so their
+    # engine config is unchanged.
+    ap.add_argument("--max-model-len", type=int, default=None)
     ap.add_argument("--temperature", type=float, default=0.0)
     # Greedy decoding with no penalty sends the fine-tuned models into verbatim
     # repetition loops that run to --max-new-tokens without ever naming an option
@@ -121,6 +129,7 @@ def main():
         tensor_parallel_size=args.tensor_parallel_size,
         dtype="bfloat16",
         trust_remote_code=True,
+        **({"max_model_len": args.max_model_len} if args.max_model_len else {}),
     )
     sampling = SamplingParams(
         temperature=args.temperature,
@@ -150,6 +159,18 @@ def main():
             )
             for it in items
         ]
+        # Bounding the context window is only free if nothing actually needs the
+        # room. Check rather than assume: a silently truncated prompt would look
+        # like a capability difference in the trajectory.
+        if args.max_model_len:
+            longest = max(len(tok(p).input_ids) for p in prompts)
+            need = longest + args.max_new_tokens
+            if need > args.max_model_len:
+                raise SystemExit(
+                    f"--max-model-len {args.max_model_len} too small for {name}: "
+                    f"longest prompt {longest} + {args.max_new_tokens} new tokens = {need}"
+                )
+
         gens = llm.generate(prompts, sampling)
 
         # `idx` is the item's position in the benchmark and is the join key the
@@ -182,6 +203,10 @@ def main():
         # Part of the instrument: two runs with different decode settings are no
         # more comparable than two runs with different judges.
         "decode": decode,
+        "engine": {
+            "tensor_parallel_size": args.tensor_parallel_size,
+            "max_model_len": args.max_model_len,
+        },
         "results": results,
     }
     (out_path / "summary.json").write_text(json.dumps(summary, indent=2))
