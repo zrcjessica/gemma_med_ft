@@ -15,7 +15,7 @@
 # success:
 #
 #   sbatch --dependency=afterany:$A1:$A2:$B1:$J1:$J2 \
-#       --export=ALL,ARM=12b,JOBS=$A1,$A2,$B1,$J1,$J2,\
+#       --export=ALL,ARM=12b,JOBS="$A1 $A2 $B1 $J1 $J2",\
 # TAGS="12b_it_full_rp11 12b_it_full_rp105",DIRS="eval/gemma-3-12b-it-baseline-rp11" \
 #       scripts/notify_arm.sbatch
 #
@@ -29,14 +29,15 @@ REPO_ROOT=/gpfs/data/oermannlab/users/zhouj14/gemma_med_ft
 cd "${REPO_ROOT}"
 
 : "${ARM:?ARM required (e.g. 12b)}"
-: "${JOBS:?JOBS required (comma-separated job ids to report on)}"
+: "${JOBS:?JOBS required (space-separated job ids to report on)}"
 TAGS=${TAGS:-}
 DIRS=${DIRS:-}
 EXPECT_STEPS=${EXPECT_STEPS:-13}
 
 # sacct is the only record of jobs that have already left the queue.
 export STATES_TEXT
-STATES_TEXT=$(sacct -j "${JOBS}" -X -o JobID%16,JobName%22,State,Elapsed --noheader 2>/dev/null || echo "sacct unavailable")
+# --export splits on commas, so JOBS arrives space-separated; sacct wants commas.
+STATES_TEXT=$(sacct -j "$(echo ${JOBS} | tr ' ' ',')" -X -o JobID%16,JobName%22,State,Elapsed --noheader 2>/dev/null || echo "sacct unavailable")
 
 python3 - "${ARM}" "${EXPECT_STEPS}" "${TAGS}" "${DIRS}" <<'PY'
 import json, os, subprocess, sys, urllib.request
