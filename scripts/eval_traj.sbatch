@@ -100,6 +100,7 @@ fi
 
 cd "${REPO_ROOT}"
 source .venv-eval/bin/activate
+source scripts/_cc_guard.sh   # superpod is Ubuntu; the gcc module there can't link
 export PYTHONUNBUFFERED=1
 export VLLM_WORKER_MULTIPROC_METHOD=spawn
 # Per-task torch-compile cache: co-scheduled array tasks otherwise race on the

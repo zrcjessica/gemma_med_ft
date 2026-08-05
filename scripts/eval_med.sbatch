@@ -72,6 +72,7 @@ echo "Out:   ${OUT_DIR}"
 
 cd "${REPO_ROOT}"
 source .venv-eval/bin/activate
+source scripts/_cc_guard.sh   # superpod is Ubuntu; the gcc module there can't link
 export PYTHONUNBUFFERED=1
 export VLLM_WORKER_MULTIPROC_METHOD=spawn
 # Benchmarks are pulled from the hub, so we do NOT set HF_HUB_OFFLINE here.
