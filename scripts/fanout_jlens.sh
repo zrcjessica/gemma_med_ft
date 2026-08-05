@@ -67,4 +67,4 @@ for ck in "$RUN_DIR"/checkpoint-*; do
     n_sub=$((n_sub + 1))
 done
 echo "submitted $n_sub workers -> $DEST"
-echo "merge when done:  python scripts/merge_jlens_fanout.py --fanout $DEST --out $REPO/eval/jlens/${SIZE}_${KIND}_full"
+echo "merge when done:  python scripts/merge_jlens_fanout.py --fanout-dir $DEST --out $REPO/eval/jlens/${SIZE}_${KIND}_full/metrics.jsonl"
