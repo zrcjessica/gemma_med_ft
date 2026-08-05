@@ -78,6 +78,12 @@ source .venv-eval/bin/activate
 source scripts/_cc_guard.sh   # superpod is Ubuntu; the gcc module there can't link
 export PYTHONUNBUFFERED=1
 export VLLM_WORKER_MULTIPROC_METHOD=spawn
+# Per-job torch-compile cache, same reason eval_traj.sbatch has one: several of
+# these co-scheduled (e.g. one baseline per size per decode setting) otherwise
+# race on the single shared cache dir and die with "vLLM failed to compile the
+# model ... corrupted compilation artifact".
+export VLLM_CACHE_ROOT="${HOME}/.cache/vllm/${SLURM_JOB_ID:-manual}"
+export TORCHINDUCTOR_CACHE_DIR="${VLLM_CACHE_ROOT}/inductor"
 # Benchmarks are pulled from the hub, so we do NOT set HF_HUB_OFFLINE here.
 
 python -m gemma_med.evaluate \
