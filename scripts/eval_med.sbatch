@@ -31,6 +31,9 @@ fi
 LABEL=${LABEL:-$(basename "$(dirname "${MODEL}")")}
 OUT_DIR=${OUT_DIR:-${REPO_ROOT}/eval/${LABEL}}
 TP=${TP:-1}
+# Unset -> evaluate.py's frozen default (rp=1.1). Set it only to match an
+# off-instrument trajectory, and suffix LABEL to match.
+RP=${RP:-}
 
 _notify_slack() {
     [[ -z "${SLACK_WEBHOOK_URL:-}" ]] && return 0
@@ -78,6 +81,7 @@ python -m gemma_med.evaluate \
     --out "${OUT_DIR}" \
     --label "${LABEL}" \
     --tensor-parallel-size "${TP}" \
+    ${RP:+--repetition-penalty ${RP}} \
     ${LIMIT:+--limit ${LIMIT}} \
     ${BENCHMARKS:+--benchmarks ${BENCHMARKS}}
 

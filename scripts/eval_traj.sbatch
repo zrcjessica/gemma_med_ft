@@ -15,6 +15,13 @@
 #   sbatch --array=0-13%4 --export=ALL,RUN_DIR=outputs/1b/full_lr1e-5_25716223,TAG=1b_it_full_v3 \
 #       scripts/eval_traj.sbatch
 #
+# The partition/gres/node headers below are defaults; override them on the
+# command line for the big arms, which need H100s:
+#
+#   sbatch --partition=superpod --nodelist=sp-0006 --gres=gpu:h100:2 --array=0-12%1 \
+#       --export=ALL,RUN_DIR=outputs/27b/full_lr1e-5_25970073,TAG=27b_it_full_rp11,TP=2 \
+#       scripts/eval_traj.sbatch
+#
 # t=0 is NOT included -- it is the base model; eval it once with
 # `sbatch --export=ALL,SIZE=1b,BASELINE=1 scripts/eval_med.sbatch`.
 # `final/` is skipped too: it duplicates the last-step checkpoint.
@@ -29,6 +36,10 @@ export HF_HOME=${HF_HOME:-/gpfs/data/oermannlab/users/zhouj14/hf}
 TAG=${TAG:-$(basename "${RUN_DIR}")}
 OUT_ROOT=${OUT_ROOT:-${REPO_ROOT}/eval/traj/${TAG}}
 TP=${TP:-1}
+# Unset -> evaluate.py's frozen default (rp=1.1 as of 2026-08-05). Set it only
+# to run a deliberately off-instrument trajectory, and give that TAG a suffix:
+# two repetition penalties are two instruments and may not share a figure.
+RP=${RP:-}
 
 # Checkpoints sorted by step, same ordering the probe uses, so array index N
 # here and trajectory point N there refer to the same weights.
@@ -78,6 +89,7 @@ echo "=== eval-traj [${SLURM_ARRAY_JOB_ID:-$SLURM_JOB_ID} task ${IDX}/${N}] ==="
 echo "Model: ${MODEL}"
 echo "Step:  ${STEP}"
 echo "Out:   ${OUT_DIR}"
+echo "Decode: rp=${RP:-default(1.1)} tp=${TP}"
 
 # Idempotent: a completed task is skipped so a partially-failed array can just
 # be resubmitted.
@@ -101,6 +113,7 @@ python -m gemma_med.evaluate \
     --out "${OUT_DIR}" \
     --label "${LABEL}" \
     --tensor-parallel-size "${TP}" \
+    ${RP:+--repetition-penalty ${RP}} \
     ${LIMIT:+--limit ${LIMIT}} \
     ${BENCHMARKS:+--benchmarks ${BENCHMARKS}}
 
