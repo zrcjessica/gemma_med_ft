@@ -32,7 +32,8 @@ PY
 cat <<'EOF'
 BUILD_JUDGE_ENV_DONE
 
-Set a key before judging -- one of:
-    export ANTHROPIC_API_KEY=...       # --provider anthropic (default), has batching
+--provider local (the default) is the lab's self-hosted Kimi and needs no key,
+but runs only from inside BigPurple. For the other two, set a key first:
+    export ANTHROPIC_API_KEY=...       # --provider anthropic, has batching
     export MOONSHOT_API_KEY=...        # --provider moonshot (Kimi), sync only
 EOF

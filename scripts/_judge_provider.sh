@@ -7,9 +7,10 @@
 #
 #   local      the lab's self-hosted Kimi. Free, but it is somebody's Slurm job:
 #              the node moves, so the endpoint must be discovered, and it is
-#              reachable only from inside BigPurple. Sync only.
+#              reachable only from inside BigPurple. Sync only. The default, and
+#              the judge of record for this study as of 2026-08-05.
 #   anthropic  the Claude API. Costs money, needs a key, but has a Batches API --
-#              half price, and the judge of record for this study.
+#              half price -- and is the only provider that runs from olab1.
 #   moonshot   Kimi's hosted API. Sync only; here for completeness.
 #
 # Everything above is handled here so callers say only PROVIDER=<x>:
@@ -31,7 +32,18 @@ local)
     # restarts, and a stale address fails as thousands of connection errors.
     if [[ -z "${JUDGE_BASE_URL:-}" ]]; then
         JUDGE_BASE_URL=$(bash "${_JUDGE_REPO_ROOT}/scripts/kimi_url.sh" 2>/dev/null)
-        [[ -z "${JUDGE_BASE_URL}" ]] && { echo "no live Kimi server found" >&2; exit 1; }
+        if [[ -z "${JUDGE_BASE_URL}" ]]; then
+            # Two very different causes, same symptom, so name both: `local` is
+            # the default provider now, and the most common way to hit this is
+            # simply running it in the wrong place.
+            echo "no live Kimi server found." >&2
+            echo "  - on olab1 this is expected: the server is unreachable from outside" >&2
+            echo "    BigPurple. Re-run with PROVIDER=anthropic, or submit" >&2
+            echo "    scripts/judge_traj.sbatch on the cluster." >&2
+            echo "  - on BigPurple it means the server's Slurm job is gone" >&2
+            echo "    (squeue -a | grep -i kimi). Use PROVIDER=anthropic until it is back." >&2
+            exit 1
+        fi
     fi
     export JUDGE_BASE_URL
     # The served model id comes from --served-model-name and is NOT the HF name.

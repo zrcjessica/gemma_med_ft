@@ -41,24 +41,32 @@ struggling with the task and the prompt or model needs revisiting.
 
 Three providers:
 
+  local      A self-hosted vLLM server -- the lab's Kimi (served as `Barney`) on
+             BigPurple. Free, no rate limit, and the judge of record as of
+             2026-08-05, but reachable only from inside BigPurple and pinned to
+             a server that moves (see LocalJudge and scripts/kimi_url.sh).
+             Default.
   anthropic  Claude API (ANTHROPIC_API_KEY). The only one with a Batches API,
-             hence the only one with a half-price offline path. Default.
+             hence the only one with a half-price offline path, and the only one
+             that runs from olab1. ~$32 per trajectory.
   moonshot   Kimi via Moonshot's hosted API (MOONSHOT_API_KEY). Sync only, so
              its lower per-token price does not beat batched Claude.
-  local      A self-hosted vLLM server -- the lab's Kimi on BigPurple. Free,
-             no rate limit, and by far the cheapest option, but reachable only
-             from inside BigPurple and pinned to a server that moves (see
-             LocalJudge and scripts/kimi_url.sh).
+
+Because the default is `local`, the default path runs on BigPurple: judging is
+now a Slurm submission, not something to start on olab1. Reach for `anthropic`
+when the lab server is down or when you need the answer without a queue.
 
 Usage. Price it first, then judge:
 
     python -m gemma_med.judge --root eval/traj/<tag> --estimate
-    python -m gemma_med.judge --root eval/traj/<tag>
-    python -m gemma_med.judge --root eval/traj/<tag> --provider moonshot --mode sync
 
-    # Self-hosted Kimi, from a compute node (submit, do not run on the login node):
-    sbatch --export=ALL,TAG=<tag> scripts/judge_traj.sbatch          # PROVIDER=local, the default
+    # Self-hosted Kimi (the default), from a compute node -- submit, do not run
+    # on the login node:
+    sbatch --export=ALL,TAG=<tag> scripts/judge_traj.sbatch
     sbatch --export=ALL,TAG=<tag>,PROVIDER=anthropic scripts/judge_traj.sbatch
+
+    # Claude, from olab1:
+    PROVIDER=anthropic scripts/judge.sh --root eval/traj/<tag>
 
 Whichever you pick, freeze it: the judge is part of the measurement apparatus,
 like the frozen fit corpus and probe set on the lens side. Scores from two judges
@@ -168,6 +176,49 @@ def build_user_message(row: dict) -> str:
     )
 
 
+# ---------------------------------------------------------------- decode
+#
+# The judge's decode settings are part of the instrument, exactly like the eval's
+# (`temperature=0.0, repetition_penalty=1.1`, recorded in summary.json). Left
+# unset, every provider samples at its own default -- Anthropic at 1.0, vLLM at
+# whatever the served model's generation_config.json says -- so "the judge" was
+# only ever frozen at the model level. These are recorded in judged_summary.json
+# next to the model for the same reason.
+#
+# Neither provider is bitwise deterministic even at t=0 (batch composition moves
+# floating-point ties), but the verdict distribution is a strict JSON schema over
+# ~5 choices, so pinning temperature removes essentially all of the practical
+# variance.
+
+JUDGE_TEMPERATURE = 0.0
+
+# There is no `seed` on the Anthropic Messages API, so this applies only to the
+# OpenAI-compatible path -- and only to the self-hosted server, which is the one
+# endpoint we know honours it. It narrows the remaining nondeterminism; it does
+# not eliminate it under vLLM's continuous batching.
+JUDGE_SEED = 0
+
+# Claude from Opus 4.7 / Sonnet 5 onward REJECTS temperature with a 400 rather
+# than ignoring it. The Claude judge is pinned to claude-haiku-4-5, which accepts
+# it, but --model is user-settable and a 400 here would fail every row in a
+# trajectory rather than one.
+_NO_SAMPLING_PARAMS = (
+    "claude-opus-4-7",
+    "claude-opus-4-8",
+    "claude-opus-5",
+    "claude-sonnet-5",
+    "claude-fable-5",
+    "claude-mythos-5",
+)
+
+
+def anthropic_decode(model: str) -> dict:
+    """The frozen decode settings this Claude model will actually accept."""
+    if any(model.startswith(m) for m in _NO_SAMPLING_PARAMS):
+        return {}
+    return {"temperature": JUDGE_TEMPERATURE}
+
+
 # ---------------------------------------------------------------- providers
 #
 # Two wire formats for the same request. They are NOT interchangeable at the
@@ -187,6 +238,7 @@ def request_params(row: dict, model: str) -> dict:
         "system": SYSTEM,
         "output_config": {"format": {"type": "json_schema", "schema": verdict_schema(row["kind"])}},
         "messages": [{"role": "user", "content": build_user_message(row)}],
+        **anthropic_decode(model),
     }
 
 
@@ -210,6 +262,9 @@ class AnthropicJudge:
         r = self.client.messages.count_tokens(model=self.model, system=p["system"], messages=p["messages"])
         return r.input_tokens, True
 
+    def decode_config(self):
+        return anthropic_decode(self.model)
+
 
 class OpenAICompatJudge:
     """Any OpenAI-compatible chat-completions endpoint.
@@ -223,6 +278,10 @@ class OpenAICompatJudge:
     KEY_ENV = "MOONSHOT_API_KEY"
     MAX_TOKENS = 64
     EXTRA_BODY: dict = {}
+    # `seed` is optional in the OpenAI schema and a hosted endpoint may reject an
+    # unknown field outright, which would fail every row rather than one. Only the
+    # self-hosted server (vLLM, known to honour it) sets this.
+    SEED: int | None = None
 
     def __init__(self, model, base_url=None):
         from openai import OpenAI
@@ -247,10 +306,17 @@ class OpenAICompatJudge:
                 "type": "json_schema",
                 "json_schema": {"name": "verdict", "strict": True, "schema": verdict_schema(row["kind"])},
             },
+            **self.decode_config(),
         }
         if self.EXTRA_BODY:
             p["extra_body"] = dict(self.EXTRA_BODY)
         return p
+
+    def decode_config(self):
+        d = {"temperature": JUDGE_TEMPERATURE}
+        if self.SEED is not None:
+            d["seed"] = self.SEED
+        return d
 
     def judge(self, row):
         msg = self.client.chat.completions.create(**self.params(row)).choices[0].message
@@ -316,6 +382,7 @@ class LocalJudge(OpenAICompatJudge):
 
     BASE_URL = "http://sp-0005:8000/v1"
     KEY_ENV = "JUDGE_API_KEY"  # vLLM ignores it; "dummy" is fine
+    SEED = JUDGE_SEED  # vLLM honours per-request seeds; hosted endpoints may not
     MAX_TOKENS = 1024
     EXTRA_BODY = {"chat_template_kwargs": {"enable_thinking": False}}
 
@@ -690,11 +757,12 @@ def main():
     ap.add_argument("--benchmarks", nargs="+", default=list(BENCHMARKS), choices=list(BENCHMARKS))
     ap.add_argument(
         "--provider",
-        default=os.environ.get("JUDGE_PROVIDER", "anthropic"),
+        default=os.environ.get("JUDGE_PROVIDER", "local"),
         choices=list(PROVIDERS),
-        help="anthropic (Claude API, batchable) | moonshot (Kimi hosted API) | "
-        "local (self-hosted vLLM, e.g. the lab Kimi on BigPurple). "
-        "Defaults to $JUDGE_PROVIDER, else anthropic.",
+        help="local (self-hosted vLLM -- the lab Kimi on BigPurple; the default, "
+        "and reachable only from inside the cluster) | anthropic (Claude API, "
+        "batchable) | moonshot (Kimi hosted API). Defaults to $JUDGE_PROVIDER, "
+        "else local.",
     )
     ap.add_argument(
         "--base-url",
@@ -762,7 +830,9 @@ def main():
     # Always name the judge, on every provider: with a toggle in play, "which
     # instrument produced these numbers" must be answerable from the log alone.
     where = f" @ {judge.base_url}" if hasattr(judge, "base_url") else ""
-    print(f"judge: {args.provider} {args.model}{where} ({args.mode})")
+    decode = judge.decode_config()
+    how = ", ".join(f"{k}={v}" for k, v in decode.items()) or "provider default (rejects sampling params)"
+    print(f"judge: {args.provider} {args.model}{where} ({args.mode}; {how})")
 
     if hasattr(judge, "base_url"):
         try:
@@ -787,7 +857,16 @@ def main():
         mixed = check_judge(d, args)
         res = judge_dir(judge, d, args)
         if res and not args.estimate:
-            summary = {"judge_provider": args.provider, "judge_model": args.model, "results": res}
+            summary = {
+                "judge_provider": args.provider,
+                "judge_model": args.model,
+                # Which decode settings actually went on the wire -- an empty dict
+                # means this model rejects sampling params and sampled at its own
+                # default. "Which instrument produced these numbers" is not
+                # answerable from the model name alone.
+                "judge_decode": judge.decode_config(),
+                "results": res,
+            }
             if mixed:
                 # A dir that survived --allow-judge-switch must say so, or the
                 # only trace of the mixing is a shell history nobody kept.

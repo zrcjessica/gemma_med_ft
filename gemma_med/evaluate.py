@@ -98,11 +98,13 @@ def main():
     ap.add_argument("--max-new-tokens", type=int, default=1024)
     ap.add_argument("--tensor-parallel-size", type=int, default=1)
     ap.add_argument("--temperature", type=float, default=0.0)
-    # Greedy decoding sends the fine-tuned models into verbatim repetition loops
-    # that run to --max-new-tokens without ever naming an option (docs/BEHAVIORAL_EVAL.md
-    # §8). These two exist to test that; 1.0 / 0.0 is the frozen default and the
-    # only setting any published number may use.
-    ap.add_argument("--repetition-penalty", type=float, default=1.0)
+    # Greedy decoding with no penalty sends the fine-tuned models into verbatim
+    # repetition loops that run to --max-new-tokens without ever naming an option
+    # (docs/BEHAVIORAL_EVAL.md §8): 13% of MedMCQA rows at 4b step-4882, vs 0.4%
+    # for MedGemma. rp=1.10 collapses that (answer rate 87.3 -> 98.3) and is the
+    # frozen default as of 2026-08-05. Anything decoded at the previous default
+    # (rp=1.0) is a different instrument and may not be mixed with these numbers.
+    ap.add_argument("--repetition-penalty", type=float, default=1.1)
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--label", default=None)
     args = ap.parse_args()
