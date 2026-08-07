@@ -6,12 +6,16 @@ panel here plots a derived scalar only -- never a Jacobian entry.
 
 Encoding choices that are not free:
 
-* Size is *ordinal* (270m < 1b < 4b), so the arms take a one-hue blue ramp
-  (dataviz reference, sequential blue steps 250/450/650), not categorical hues.
-  Categorical slots 1-3 already mean general/medical/drift everywhere else in
-  the deck; reusing them for arms would make blue mean two things across slides.
+* Size is *ordinal* (270m < 1b < 4b < 12b), so the arms take a one-hue blue
+  ramp, not categorical hues. Categorical slots 1-3 already mean
+  general/medical/drift everywhere else in the deck; reusing them for arms
+  would make blue mean two things across slides.
   Validated with `validate_palette.py --ordinal --mode light`: monotone L,
-  all adjacent gaps >= 0.06, single hue (3 deg spread), light end 2.06:1.
+  all adjacent gaps >= 0.06, single hue (4 deg spread), light end 2.06:1.
+  The 4th step was added at the *dark* end, not the light one: #86b6ef is
+  already at 2.06:1 against the surface, so a paler step fails the 2.0 ordinal
+  floor (a #b3d0f5 lead-in measures 1.54:1). Re-step the dark half, never the
+  light end, if a 5th arm (27b) is added.
 * That light end clears the 2.0 ordinal floor but not the 3.0 categorical one,
   which triggers the relief rule -- so each arm is direct-labeled at its last
   point and carries its own marker shape. Identity is never color alone.
@@ -36,8 +40,8 @@ from plot_trajectory import INK, MUTED, GRID  # noqa: E402  (also applies rcPara
 
 # Ordinal blue ramp, light->dark = small->large. See module docstring for the
 # validator run; do not swap these for categorical slots.
-ARM_COLOR = ["#86b6ef", "#2a78d6", "#104281"]
-ARM_MARKER = ["o", "s", "^"]
+ARM_COLOR = ["#86b6ef", "#3f8ae0", "#1d5aa8", "#0b3060"]
+ARM_MARKER = ["o", "s", "^", "D"]
 
 
 def load(path):
@@ -109,11 +113,19 @@ def plot(arms, out_pdf, out_png, suptitle):
         panel(axes[0][col], kl(cue),
               "KL(model ‖ lens)  (nats)",
               f"Faithfulness — {cue} cue", base_ref=True)
-        # top-left, not bottom-left: the 4b baseline sits low in the general
-        # panel and the caption lands on top of it there.
-        axes[0][col].text(0.02, 0.97, "dashed = that arm's base (t=0)",
-                          transform=axes[0][col].transAxes, fontsize=7.5,
-                          color=MUTED, va="top")
+        # Park the caption in whichever corner no baseline occupies. Hardcoding
+        # a corner does not survive a new arm: top-left was correct for three
+        # arms (4b's general baseline sits low) and 12b's medical baseline then
+        # landed on top of it.
+        ax = axes[0][col]
+        lo, hi = ax.get_ylim()
+        bases = [(next(r for r in rows if r["step"] == 0)["concordance"][cue]["kl_final"] - lo)
+                 / (hi - lo) for _, rows in arms]
+        top_clear = not any(f > 0.86 for f in bases)
+        ax.text(0.02, 0.97 if top_clear else 0.03,
+                "dashed = that arm's base (t=0)",
+                transform=ax.transAxes, fontsize=7.5,
+                color=MUTED, va="top" if top_clear else "bottom")
 
     for col, cue in ((1, "general"), (2, "medical")):
         ax = axes[1][col]

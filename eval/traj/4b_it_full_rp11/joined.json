@@ -1,0 +1,492 @@
+[
+  {
+    "step": 0,
+    "lens": {
+      "drift_relfro_max": 0.0,
+      "drift_cos_min": 1.0,
+      "kl_general_layermean": 2.1627262544051513,
+      "kl_medical_layermean": 4.682727478027712,
+      "top1_general_layermean": 0.8533333333333334,
+      "top1_medical_layermean": 0.6766666666666667,
+      "kl_general_last": 0.374334276978625,
+      "kl_medical_last": 0.7194009291363181,
+      "top1_general_last": 0.92,
+      "top1_medical_last": 0.84
+    },
+    "behavioral": {
+      "medqa": {
+        "n": 1273,
+        "acc_raw": 50.903377847604084,
+        "acc_answered": 50.943396226415096,
+        "answer_rate": 99.92144540455617
+      },
+      "medmcqa": {
+        "n": 4183,
+        "acc_raw": 46.545541477408555,
+        "acc_answered": 46.634730538922156,
+        "answer_rate": 99.80874970117141
+      },
+      "pubmedqa": {
+        "n": 500,
+        "acc_raw": 60.0,
+        "acc_answered": 60.0,
+        "answer_rate": 100.0
+      }
+    }
+  },
+  {
+    "step": 2,
+    "lens": {
+      "drift_relfro_max": 0.032234206795692444,
+      "drift_cos_min": 1.001020073890686,
+      "kl_general_layermean": 2.180461141625399,
+      "kl_medical_layermean": 4.701426054816815,
+      "top1_general_layermean": 0.8533333333333334,
+      "top1_medical_layermean": 0.6766666666666667,
+      "kl_general_last": 0.377904600271022,
+      "kl_medical_last": 0.7255959410216019,
+      "top1_general_last": 0.92,
+      "top1_medical_last": 0.84
+    },
+    "behavioral": {
+      "medqa": {
+        "n": 1273,
+        "acc_raw": 51.53181461115475,
+        "acc_answered": 51.61290322580645,
+        "answer_rate": 99.84289080911233
+      },
+      "medmcqa": {
+        "n": 4183,
+        "acc_raw": 46.44991632799426,
+        "acc_answered": 46.472135852666824,
+        "answer_rate": 99.95218742529285
+      },
+      "pubmedqa": {
+        "n": 500,
+        "acc_raw": 59.6,
+        "acc_answered": 59.6,
+        "answer_rate": 100.0
+      }
+    }
+  },
+  {
+    "step": 4,
+    "lens": {
+      "drift_relfro_max": 0.025598302483558655,
+      "drift_cos_min": 1.0011719465255737,
+      "kl_general_layermean": 2.1501316721396218,
+      "kl_medical_layermean": 4.677233386810694,
+      "top1_general_layermean": 0.8533333333333334,
+      "top1_medical_layermean": 0.6766666666666667,
+      "kl_general_last": 0.3722088693832575,
+      "kl_medical_last": 0.7243752519757254,
+      "top1_general_last": 0.92,
+      "top1_medical_last": 0.84
+    },
+    "behavioral": {
+      "medqa": {
+        "n": 1273,
+        "acc_raw": 53.41712490180676,
+        "acc_answered": 53.54330708661417,
+        "answer_rate": 99.7643362136685
+      },
+      "medmcqa": {
+        "n": 4183,
+        "acc_raw": 47.238823810662204,
+        "acc_answered": 47.28403924383824,
+        "answer_rate": 99.90437485058571
+      },
+      "pubmedqa": {
+        "n": 500,
+        "acc_raw": 61.6,
+        "acc_answered": 61.6,
+        "answer_rate": 100.0
+      }
+    }
+  },
+  {
+    "step": 8,
+    "lens": {
+      "drift_relfro_max": 0.02658304013311863,
+      "drift_cos_min": 1.0011554956436157,
+      "kl_general_layermean": 2.1573842667308543,
+      "kl_medical_layermean": 4.663090873419715,
+      "top1_general_layermean": 0.8533333333333334,
+      "top1_medical_layermean": 0.6766666666666667,
+      "kl_general_last": 0.37503902657605065,
+      "kl_medical_last": 0.7157524961006129,
+      "top1_general_last": 0.92,
+      "top1_medical_last": 0.84
+    },
+    "behavioral": {
+      "medqa": {
+        "n": 1273,
+        "acc_raw": 51.846032992930084,
+        "acc_answered": 51.927616050354054,
+        "answer_rate": 99.84289080911233
+      },
+      "medmcqa": {
+        "n": 4183,
+        "acc_raw": 47.382261534783645,
+        "acc_answered": 47.438966012446144,
+        "answer_rate": 99.88046856323213
+      },
+      "pubmedqa": {
+        "n": 500,
+        "acc_raw": 59.6,
+        "acc_answered": 59.6,
+        "answer_rate": 100.0
+      }
+    }
+  },
+  {
+    "step": 16,
+    "lens": {
+      "drift_relfro_max": 0.1330958902835846,
+      "drift_cos_min": 0.9945163130760193,
+      "kl_general_layermean": 2.1035315564828916,
+      "kl_medical_layermean": 4.487551867985167,
+      "top1_general_layermean": 0.85,
+      "top1_medical_layermean": 0.6633333333333333,
+      "kl_general_last": 0.38082009754722096,
+      "kl_medical_last": 0.6974416362866759,
+      "top1_general_last": 0.92,
+      "top1_medical_last": 0.82
+    },
+    "behavioral": {
+      "medqa": {
+        "n": 1273,
+        "acc_raw": 52.00314218381775,
+        "acc_answered": 52.16706067769898,
+        "answer_rate": 99.68578161822467
+      },
+      "medmcqa": {
+        "n": 4183,
+        "acc_raw": 46.99976093712647,
+        "acc_answered": 47.21421709894332,
+        "answer_rate": 99.5457805402821
+      },
+      "pubmedqa": {
+        "n": 500,
+        "acc_raw": 60.4,
+        "acc_answered": 60.4,
+        "answer_rate": 100.0
+      }
+    }
+  },
+  {
+    "step": 32,
+    "lens": {
+      "drift_relfro_max": 0.3311711847782135,
+      "drift_cos_min": 0.9472216963768005,
+      "kl_general_layermean": 2.1209327443448514,
+      "kl_medical_layermean": 4.478282862445339,
+      "top1_general_layermean": 0.8666666666666667,
+      "top1_medical_layermean": 0.7000000000000001,
+      "kl_general_last": 0.4132380129757803,
+      "kl_medical_last": 0.7495092382840812,
+      "top1_general_last": 0.96,
+      "top1_medical_last": 0.86
+    },
+    "behavioral": {
+      "medqa": {
+        "n": 1273,
+        "acc_raw": 50.98193244304792,
+        "acc_answered": 52.00320512820513,
+        "answer_rate": 98.03613511390417
+      },
+      "medmcqa": {
+        "n": 4183,
+        "acc_raw": 46.06741573033708,
+        "acc_answered": 47.12643678160919,
+        "answer_rate": 97.75280898876404
+      },
+      "pubmedqa": {
+        "n": 500,
+        "acc_raw": 59.8,
+        "acc_answered": 59.8,
+        "answer_rate": 100.0
+      }
+    }
+  },
+  {
+    "step": 64,
+    "lens": {
+      "drift_relfro_max": 0.4569351077079773,
+      "drift_cos_min": 0.8995886445045471,
+      "kl_general_layermean": 2.947632476762131,
+      "kl_medical_layermean": 5.1889996505187215,
+      "top1_general_layermean": 0.8466666666666667,
+      "top1_medical_layermean": 0.7166666666666667,
+      "kl_general_last": 0.5878595731372479,
+      "kl_medical_last": 0.8501539004407823,
+      "top1_general_last": 0.92,
+      "top1_medical_last": 0.88
+    },
+    "behavioral": {
+      "medqa": {
+        "n": 1273,
+        "acc_raw": 46.897093479968575,
+        "acc_answered": 47.645650438946525,
+        "answer_rate": 98.42890809112333
+      },
+      "medmcqa": {
+        "n": 4183,
+        "acc_raw": 44.01147501792972,
+        "acc_answered": 45.3559990145356,
+        "answer_rate": 97.03562036815683
+      },
+      "pubmedqa": {
+        "n": 500,
+        "acc_raw": 61.8,
+        "acc_answered": 61.8,
+        "answer_rate": 100.0
+      }
+    }
+  },
+  {
+    "step": 128,
+    "lens": {
+      "drift_relfro_max": 0.4745747447013855,
+      "drift_cos_min": 0.8912158608436584,
+      "kl_general_layermean": 3.4814863896897683,
+      "kl_medical_layermean": 5.295428996467963,
+      "top1_general_layermean": 0.8300000000000001,
+      "top1_medical_layermean": 0.7266666666666667,
+      "kl_general_last": 0.6851345064025373,
+      "kl_medical_last": 0.8952397844009101,
+      "top1_general_last": 0.9,
+      "top1_medical_last": 0.92
+    },
+    "behavioral": {
+      "medqa": {
+        "n": 1273,
+        "acc_raw": 47.83974862529458,
+        "acc_answered": 48.1042654028436,
+        "answer_rate": 99.45011783189317
+      },
+      "medmcqa": {
+        "n": 4183,
+        "acc_raw": 43.79631843174755,
+        "acc_answered": 44.42289039767216,
+        "answer_rate": 98.58952904613913
+      },
+      "pubmedqa": {
+        "n": 500,
+        "acc_raw": 56.0,
+        "acc_answered": 56.0,
+        "answer_rate": 100.0
+      }
+    }
+  },
+  {
+    "step": 256,
+    "lens": {
+      "drift_relfro_max": 0.4900006651878357,
+      "drift_cos_min": 0.8887779116630554,
+      "kl_general_layermean": 4.108283750138555,
+      "kl_medical_layermean": 5.757256468702107,
+      "top1_general_layermean": 0.8466666666666666,
+      "top1_medical_layermean": 0.7166666666666667,
+      "kl_general_last": 0.8086188213620334,
+      "kl_medical_last": 0.9784677238017321,
+      "top1_general_last": 0.96,
+      "top1_medical_last": 0.9
+    },
+    "behavioral": {
+      "medqa": {
+        "n": 1273,
+        "acc_raw": 50.51060487038492,
+        "acc_answered": 50.66981875492514,
+        "answer_rate": 99.68578161822467
+      },
+      "medmcqa": {
+        "n": 4183,
+        "acc_raw": 44.96772651207267,
+        "acc_answered": 45.79985390796202,
+        "answer_rate": 98.18312216112838
+      },
+      "pubmedqa": {
+        "n": 500,
+        "acc_raw": 65.8,
+        "acc_answered": 65.8,
+        "answer_rate": 100.0
+      }
+    }
+  },
+  {
+    "step": 512,
+    "lens": {
+      "drift_relfro_max": 0.5308223366737366,
+      "drift_cos_min": 0.8666054010391235,
+      "kl_general_layermean": 4.394815469016321,
+      "kl_medical_layermean": 5.961551455305887,
+      "top1_general_layermean": 0.8533333333333332,
+      "top1_medical_layermean": 0.7033333333333335,
+      "kl_general_last": 0.8441119673522189,
+      "kl_medical_last": 0.9787494222074747,
+      "top1_general_last": 0.94,
+      "top1_medical_last": 0.84
+    },
+    "behavioral": {
+      "medqa": {
+        "n": 1273,
+        "acc_raw": 51.45326001571092,
+        "acc_answered": 52.56821829855538,
+        "answer_rate": 97.8790259230165
+      },
+      "medmcqa": {
+        "n": 4183,
+        "acc_raw": 45.06335166148697,
+        "acc_answered": 45.81915410792416,
+        "answer_rate": 98.35046617260339
+      },
+      "pubmedqa": {
+        "n": 500,
+        "acc_raw": 71.6,
+        "acc_answered": 71.6,
+        "answer_rate": 100.0
+      }
+    }
+  },
+  {
+    "step": 1024,
+    "lens": {
+      "drift_relfro_max": 0.5130571126937866,
+      "drift_cos_min": 0.8754752278327942,
+      "kl_general_layermean": 4.442465902356585,
+      "kl_medical_layermean": 6.178850920642726,
+      "top1_general_layermean": 0.8466666666666667,
+      "top1_medical_layermean": 0.6666666666666666,
+      "kl_general_last": 0.8491422443790362,
+      "kl_medical_last": 0.9379902365896851,
+      "top1_general_last": 0.94,
+      "top1_medical_last": 0.82
+    },
+    "behavioral": {
+      "medqa": {
+        "n": 1273,
+        "acc_raw": 49.72505891594658,
+        "acc_answered": 49.881796690307326,
+        "answer_rate": 99.68578161822467
+      },
+      "medmcqa": {
+        "n": 4183,
+        "acc_raw": 48.5297633277552,
+        "acc_answered": 48.91566265060241,
+        "answer_rate": 99.21109251733206
+      },
+      "pubmedqa": {
+        "n": 500,
+        "acc_raw": 68.8,
+        "acc_answered": 68.937875751503,
+        "answer_rate": 99.8
+      }
+    }
+  },
+  {
+    "step": 2048,
+    "lens": {
+      "drift_relfro_max": 0.5075907707214355,
+      "drift_cos_min": 0.8721950650215149,
+      "kl_general_layermean": 4.546910007043043,
+      "kl_medical_layermean": 6.007426812881217,
+      "top1_general_layermean": 0.85,
+      "top1_medical_layermean": 0.68,
+      "kl_general_last": 0.8794634595909155,
+      "kl_medical_last": 0.8600026700948366,
+      "top1_general_last": 0.94,
+      "top1_medical_last": 0.86
+    },
+    "behavioral": {
+      "medqa": {
+        "n": 1273,
+        "acc_raw": 58.208955223880594,
+        "acc_answered": 58.949880668257755,
+        "answer_rate": 98.74312647289867
+      },
+      "medmcqa": {
+        "n": 4183,
+        "acc_raw": 50.15539086779823,
+        "acc_answered": 50.73760580411125,
+        "answer_rate": 98.85249820702845
+      },
+      "pubmedqa": {
+        "n": 500,
+        "acc_raw": 73.6,
+        "acc_answered": 73.6,
+        "answer_rate": 100.0
+      }
+    }
+  },
+  {
+    "step": 4096,
+    "lens": {
+      "drift_relfro_max": 0.48199662566185,
+      "drift_cos_min": 0.8983020782470703,
+      "kl_general_layermean": 4.288484840713402,
+      "kl_medical_layermean": 5.921371446909228,
+      "top1_general_layermean": 0.7799999999999999,
+      "top1_medical_layermean": 0.6566666666666667,
+      "kl_general_last": 0.7069611371227075,
+      "kl_medical_last": 0.8172249486809596,
+      "top1_general_last": 0.88,
+      "top1_medical_last": 0.8
+    },
+    "behavioral": {
+      "medqa": {
+        "n": 1273,
+        "acc_raw": 58.523173605655934,
+        "acc_answered": 58.753943217665615,
+        "answer_rate": 99.60722702278083
+      },
+      "medmcqa": {
+        "n": 4183,
+        "acc_raw": 52.88070762610567,
+        "acc_answered": 53.39126237026309,
+        "answer_rate": 99.04374850585704
+      },
+      "pubmedqa": {
+        "n": 500,
+        "acc_raw": 72.8,
+        "acc_answered": 72.8,
+        "answer_rate": 100.0
+      }
+    }
+  },
+  {
+    "step": 4882,
+    "lens": {
+      "drift_relfro_max": 0.4788476228713989,
+      "drift_cos_min": 0.8994377255439758,
+      "kl_general_layermean": 4.243078501790976,
+      "kl_medical_layermean": 5.867307322847579,
+      "top1_general_layermean": 0.7999999999999999,
+      "top1_medical_layermean": 0.66,
+      "kl_general_last": 0.715449686688953,
+      "kl_medical_last": 0.811716542111244,
+      "top1_general_last": 0.9,
+      "top1_medical_last": 0.8
+    },
+    "behavioral": {
+      "medqa": {
+        "n": 1273,
+        "acc_raw": 58.83739198743127,
+        "acc_answered": 59.162717219589254,
+        "answer_rate": 99.45011783189317
+      },
+      "medmcqa": {
+        "n": 4183,
+        "acc_raw": 53.31102079847,
+        "acc_answered": 53.60576923076923,
+        "answer_rate": 99.45015539086779
+      },
+      "pubmedqa": {
+        "n": 500,
+        "acc_raw": 73.2,
+        "acc_answered": 73.2,
+        "answer_rate": 100.0
+      }
+    }
+  }
+]

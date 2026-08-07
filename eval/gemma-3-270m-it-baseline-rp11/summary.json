@@ -1,0 +1,25 @@
+{
+  "model": "/gpfs/data/oermannlab/users/yeb04/hf/hub/models--google--gemma-3-270m-it/snapshots/ac82b4e820549b854eebf28ce6dedaf9fdfa17b3/",
+  "label": "gemma-3-270m-it-baseline-rp11",
+  "scored": false,
+  "decode": {
+    "temperature": 0.0,
+    "max_new_tokens": 1024,
+    "repetition_penalty": 1.1,
+    "seed": 0
+  },
+  "results": {
+    "medqa": {
+      "n": 1273,
+      "n_at_token_cap": 1
+    },
+    "medmcqa": {
+      "n": 4183,
+      "n_at_token_cap": 7
+    },
+    "pubmedqa": {
+      "n": 500,
+      "n_at_token_cap": 3
+    }
+  }
+}

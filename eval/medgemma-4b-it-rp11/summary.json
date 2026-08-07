@@ -1,0 +1,25 @@
+{
+  "model": "/gpfs/data/oermannlab/users/yeb04/hf/hub/models--google--medgemma-4b-it/snapshots/290cda5eeccbee130f987c4ad74a59ae6f196408",
+  "label": "medgemma-4b-it-rp11",
+  "scored": false,
+  "decode": {
+    "temperature": 0.0,
+    "max_new_tokens": 1024,
+    "repetition_penalty": 1.1,
+    "seed": 0
+  },
+  "results": {
+    "medqa": {
+      "n": 1273,
+      "n_at_token_cap": 1
+    },
+    "medmcqa": {
+      "n": 4183,
+      "n_at_token_cap": 3
+    },
+    "pubmedqa": {
+      "n": 500,
+      "n_at_token_cap": 0
+    }
+  }
+}

@@ -1,0 +1,25 @@
+{
+  "model": "/gpfs/data/oermannlab/users/zhouj14/gemma_med_ft/outputs/270m/full_lr1e-5_25799673/checkpoint-4882",
+  "label": "270m_it_full_rp11-step4882",
+  "scored": false,
+  "decode": {
+    "temperature": 0.0,
+    "max_new_tokens": 1024,
+    "repetition_penalty": 1.1,
+    "seed": 0
+  },
+  "results": {
+    "medqa": {
+      "n": 1273,
+      "n_at_token_cap": 112
+    },
+    "medmcqa": {
+      "n": 4183,
+      "n_at_token_cap": 197
+    },
+    "pubmedqa": {
+      "n": 500,
+      "n_at_token_cap": 167
+    }
+  }
+}
