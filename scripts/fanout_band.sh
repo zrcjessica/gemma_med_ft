@@ -78,7 +78,7 @@ for ck in "$RUN_DIR"/checkpoint-*; do
     id=$(sbatch --parsable --partition="$PARTITION" ${NODE:+--nodelist="$NODE"} --gres="$GRES" \
         --job-name="bd${SIZE}_$n" \
         --output="$DEST/bd${SIZE}_${n}_%j.out" --error="$DEST/bd${SIZE}_${n}_%j.err" \
-        --export=ALL,SIZE="$SIZE",KIND="$KIND"${BASE_MODEL:+,BASE_MODEL="$BASE_MODEL"},CKPTS="$ck",OUT="$o",ARM="${SIZE}_${KIND}",SAVE_LENS="$SAVE_LENS",REQUEUE_ON_GPU_FAIL=0${QUIET_WORKERS:+,SLACK_WEBHOOK_URL=}${DIM_BATCH:+,DIM_BATCH=$DIM_BATCH}${CKA_TOKENS:+,CKA_TOKENS=$CKA_TOKENS} \
+        --export=ALL,SIZE="$SIZE",KIND="$KIND"${BASE_MODEL:+,BASE_MODEL="$BASE_MODEL"},CKPTS="$ck",OUT="$o",ARM="${SIZE}_${KIND}",SAVE_LENS="$SAVE_LENS",REQUEUE_ON_GPU_FAIL=0${QUIET_WORKERS:+,QUIET_SLACK=1}${DIM_BATCH:+,DIM_BATCH=$DIM_BATCH}${CKA_TOKENS:+,CKA_TOKENS=$CKA_TOKENS} \
         "$REPO/scripts/probe_band.sbatch")
     worker_ids+=("$id")
     n_sub=$((n_sub + 1))

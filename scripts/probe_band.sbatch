@@ -46,6 +46,13 @@ source "${REPO_ROOT}/scripts/_resolve_model.sh"
 BASE_MODEL=${BASE_MODEL:-$(resolve_gemma "${SIZE}" "${KIND}" || true)}
 
 _notify_slack() {
+    # QUIET_SLACK silences the per-job ping so a fanout can send one message per
+    # ARM instead of one per worker (66 of them across the full grid); the arm
+    # notifier is notify_band.sbatch. An explicit flag rather than blanking
+    # SLACK_WEBHOOK_URL through --export: `--export=ALL,VAR=` is ambiguous
+    # across Slurm versions (set-empty vs propagate-from-submitter), and the
+    # failure mode of guessing wrong is 66 Slack messages.
+    [[ -n "${QUIET_SLACK:-}" ]] && return 0
     [[ -z "${SLACK_WEBHOOK_URL:-}" ]] && return 0
     local code=$1 elapsed status color
     elapsed=$(( SECONDS / 60 ))
