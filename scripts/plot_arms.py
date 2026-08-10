@@ -40,8 +40,11 @@ from plot_trajectory import INK, MUTED, GRID  # noqa: E402  (also applies rcPara
 
 # Ordinal blue ramp, light->dark = small->large. See module docstring for the
 # validator run; do not swap these for categorical slots.
-ARM_COLOR = ["#86b6ef", "#3f8ae0", "#1d5aa8", "#0b3060"]
-ARM_MARKER = ["o", "s", "^", "D"]
+# Ordinal ramp (size is ordered): one hue, light->dark, five documented steps
+# 250/350/450/550/700. Validated --ordinal on the light surface: monotone L,
+# all adjacent gaps >= 0.06, light end 2.06:1 vs surface, hue spread 4 deg.
+ARM_COLOR = ["#86b6ef", "#5598e7", "#2a78d6", "#1c5cab", "#0d366b"]
+ARM_MARKER = ["o", "s", "^", "D", "P"]
 
 
 def load(path):
@@ -104,8 +107,8 @@ def plot(arms, out_pdf, out_png, suptitle):
     # --- left column: the Jacobian geometry ---
     panel(axes[0][0], relfro, "rel. Frobenius  ‖J−J₀‖/‖J₀‖", "Jacobian drift from t=0")
     panel(axes[1][0], cos, "cosine(J, J₀)", "Jacobian alignment with t=0")
-    # cosine cannot exceed 1; the ceiling line makes the fp32 dot-product
-    # overshoot at near-zero drift legible as noise rather than signal.
+    # cosine cannot exceed 1; the ceiling line is the reference the fp32 read-out
+    # used to breach (see correct_drift_cos.py -- these metrics are corrected).
     axes[1][0].axhline(1.0, color=GRID, lw=1.0, zorder=0)
 
     # --- middle/right columns: faithfulness, per cue ---
@@ -113,19 +116,10 @@ def plot(arms, out_pdf, out_png, suptitle):
         panel(axes[0][col], kl(cue),
               "KL(model ‖ lens)  (nats)",
               f"Faithfulness — {cue} cue", base_ref=True)
-        # Park the caption in whichever corner no baseline occupies. Hardcoding
-        # a corner does not survive a new arm: top-left was correct for three
-        # arms (4b's general baseline sits low) and 12b's medical baseline then
-        # landed on top of it.
-        ax = axes[0][col]
-        lo, hi = ax.get_ylim()
-        bases = [(next(r for r in rows if r["step"] == 0)["concordance"][cue]["kl_final"] - lo)
-                 / (hi - lo) for _, rows in arms]
-        top_clear = not any(f > 0.86 for f in bases)
-        ax.text(0.02, 0.97 if top_clear else 0.03,
-                "dashed = that arm's base (t=0)",
-                transform=ax.transAxes, fontsize=7.5,
-                color=MUTED, va="top" if top_clear else "bottom")
+        # The "dashed = base" note lives in the suptitle, not in the panel.
+        # Corner-picking stopped working at five arms: 27b's medical baseline
+        # tops the axis while 270m/1b crowd the floor, so neither corner is
+        # free -- and the note was being drawn once per panel anyway.
 
     for col, cue in ((1, "general"), (2, "medical")):
         ax = axes[1][col]
@@ -176,7 +170,8 @@ def main():
     out = Path(args.outdir)
     out.mkdir(parents=True, exist_ok=True)
     plot(arms, out / "fig_arms.pdf", out / "fig_arms.png",
-         args.title + "  ·  KL = mean over the last n/5 source layers")
+         args.title + "  ·  KL = mean over the last n/5 source layers"
+         "  ·  dashed = that arm's base (t=0)")
     print("wrote:", out / "fig_arms.pdf", out / "fig_arms.png")
     summarize(arms)
 

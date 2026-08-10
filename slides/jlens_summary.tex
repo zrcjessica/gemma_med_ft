@@ -1,4 +1,4 @@
-% Jacobian-lens trajectory summary: gemma-3-{270m,1b,4b,12b}-it
+% Jacobian-lens trajectory summary: gemma-3-{270m,1b,4b,12b,27b}-it
 % Build:  tectonic slides/jlens_summary.tex
 \documentclass[aspectratio=169,10pt]{beamer}
 
@@ -24,7 +24,7 @@
 \newcommand{\bad}[1]{\textcolor{down}{#1}}
 
 \title{Jacobian-lens trajectories under medical SFT}
-\subtitle{\texttt{gemma-3-\{270m,1b,4b,12b\}-it}}
+\subtitle{\texttt{gemma-3-\{270m,1b,4b,12b,27b\}-it}}
 \author{}
 \date{\today}
 
@@ -38,7 +38,7 @@
   checkpoints to step 4882
 
   \vspace{0.8em}
-  {\footnotesize\bad{Draft --- findings 2 and 3 are held pending the 27b arm.}
+  {\footnotesize\good{Five arms complete; findings 2--3 are settled.}
   All behavioral numbers are on the \textbf{current} instrument
   (\texttt{rp}$=$\texttt{1.1}, self-hosted Kimi judge); nothing here is
   comparable to a version of this deck dated before 2026-08-05.}
@@ -47,9 +47,9 @@
 % ---------------------------------------------------------------- setup
 \begin{frame}{Setup}
   \begin{itemize}
-    \item \textbf{Four arms}, identical seed and data order:
-      \texttt{gemma-3-\{270m,1b,4b,12b\}-it}, full FT,
-      lr $1\mathrm{e}{-5}$, completion-only loss. A 27b arm is in flight.
+    \item \textbf{Five arms}, identical seed and data order:
+      \texttt{gemma-3-\{270m,1b,4b,12b,27b\}-it}, full FT,
+      lr $1\mathrm{e}{-5}$, completion-only loss.
     \item \textbf{Log-spaced checkpoints} $\{1,2,4,\dots,4096\}$ + final (4882).
       $t=0$ is the untouched base, prepended by the probe.
     \item \textbf{Lens refit per checkpoint} on a frozen 1000-sequence generic
@@ -66,11 +66,12 @@
   \vfill
   {\footnotesize All lens numbers below are the \textbf{mean over the last
   $n/5$ source layers} (the probe's \texttt{kl\_final} / \texttt{top1\_final}):
-  3 layers at 270m, 5 at 1b, 6 at 4b, 9 at 12b. Where the single final layer
-  disagrees, it is called out explicitly --- see the read-out caveat.
-  Coverage: 14 / 15 / 14 / 14 lens points (270m / 1b / 4b / 12b) --- all four
-  complete. \textbf{Behavioral: all four arms are judge-scored, complete, and on
-  one instrument} (14 / 15 / 14 / 14 points incl.\ $t{=}0$), so cross-size
+  3 layers at 270m, 5 at 1b, 6 at 4b, 9 at 12b, 12 at 27b. Where the single
+  final layer disagrees, it is called out explicitly --- see the read-out
+  caveat. Coverage: 14 / 15 / 14 / 14 / 14 lens points
+  (270m / 1b / 4b / 12b / 27b) --- all five complete.
+  \textbf{Behavioral: all five arms are judge-scored, complete, and on
+  one instrument} (14 / 15 / 14 / 14 / 14 points incl.\ $t{=}0$), so cross-size
   behavioral comparison is legitimate for the first time in this deck.}
 \end{frame}
 
@@ -128,8 +129,8 @@
 \begin{frame}{Reading the metrics --- the two drift measures}
   \footnotesize
   $J_l$ = lens Jacobian at source layer $l$; $J_l^{0}$ = the same layer in the
-  $t{=}0$ base lens. $n$ = number of source layers (18 / 26 / 34 / 48 at
-  270m / 1b / 4b / 12b). Both measures are computed per layer, then averaged over
+  $t{=}0$ base lens. $n$ = number of source layers (18 / 26 / 34 / 48 / 62 at
+  270m / 1b / 4b / 12b / 27b). Both measures are computed per layer, then averaged over
   all $n$; both are exactly $0$ / $1$ at $t{=}0$ by construction.
 
   \vspace{0.6em}
@@ -237,7 +238,7 @@
       {\footnotesize
       \begin{enumerate}\setlength{\itemsep}{0.4em}
         \item \textbf{Never compare absolute KL across sizes.} \texttt{kl\_final}
-          averages a \emph{different number of layers} per arm (3 / 5 / 6 / 9),
+          averages a \emph{different number of layers} per arm (3 / 5 / 6 / 9 / 12),
           over models of different depth and width. Only the \textbf{within-arm
           $\Delta$ from $t{=}0$} is comparable across arms.
         \item \textbf{Always read against $t{=}0$.} Every figure carries the
@@ -263,11 +264,16 @@
       partly \emph{retreats}. The Jacobian finishes moving in the first
       ${\sim}100$ steps. \textbf{Onset gets earlier with size}; at 12b it is
       underway by step 2.
-    \item[2--3.] \bad{\textbf{Held pending 27b.}} Both faithfulness-vs-size
-      findings from the three-arm deck (``the cost scales with size'';
-      ``medical is not protected'') \textbf{reverse at 12b}. Whether 4b or 12b
-      is the outlier is what 27b decides --- so the data are on the slides and
-      the \emph{interpretation} is deliberately not written yet.
+    \item[2.] \bad{\textbf{The faithfulness cost is not monotone in size --- it
+      peaks at 4b and vanishes.}} $\Delta$KL on the \texttt{general} control runs
+      $+0.09 / +0.54 / +2.08 / +1.29 / \mathbf{-0.25}$: an inverted U. 12b was
+      the descending limb, not an anomaly, and \textbf{27b pays no cost at all}.
+    \item[3.] \good{\textbf{Medical \emph{is} protected, increasingly so with
+      size.}} $\Delta$KL medical $-0.05 / -0.37 / \mathbf{+1.19} / -1.98 /
+      \mathbf{-6.26}$, with top-1 agreeing. \textbf{4b is the sole outlier on
+      both cues} across five points, and why is unexplained.
+      \good{Both findings from the three-arm deck are now retracted outright:
+      the cost does not scale with size, and medical is not unprotected.}
     \item[4.] \textbf{Medical SFT works, but the gain is bounded by headroom,
       not size.} Answered-accuracy $\Delta$ on MedQA / MedMCQA / PubMedQA:
       270m \bad{$-1.9/-10.2/-2.8$}, 1b \good{$+4.3/+2.7/+2.8$},
@@ -295,44 +301,49 @@
     \midrule
     \texttt{270m-it} & step 64 & 0.250 @ 1024 & 0.249 / 0.976 & 0.350 \\
     \texttt{1b-it}   & step 16 & 0.308 @ 2048 & 0.279 / 0.956 & 0.418 \\
-    \texttt{4b-it}   & step 16 & 0.424 @ 512  & 0.343 / 0.943 & 0.531 \\
-    \texttt{12b-it}  & \bad{step 2} & 0.472 @ 2048 & 0.421 / 0.900 & 0.692 \\
+    \texttt{4b-it}   & step 16 & 0.424 @ 512  & 0.343 / 0.941 & 0.531 \\
+    \texttt{12b-it}  & \bad{step 2} & 0.472 @ 2048 & 0.421 / 0.897 & 0.692 \\
+    \texttt{27b-it}  & \bad{step 2} & 0.466 @ 2048$^\dagger$ & 0.466 / 0.874 & 0.697 \\
     \bottomrule
   \end{tabular}
 
-  \vspace{1.0em}
+  \vspace{0.6em}
+  {\footnotesize
   \begin{itemize}\setlength{\itemsep}{0.2em}
     \item \textbf{Onset is earlier and the swing larger the bigger the model},
-      now over four sizes: final relfro $0.249 < 0.279 < 0.343 < 0.421$, and
-      cosine falls monotonically $0.976 > 0.956 > 0.943 > 0.900$. This is the
-      one size trend in the deck that 12b \emph{strengthens} rather than breaks.
-    \item \bad{The ``nothing moves for ${\sim}8$ steps'' claim is now false.}
-      It held at $\leq 0.008$ for 270m/1b/4b, but 12b reads $0.055$ at step 2
-      and $0.091$ at step 4 --- an order of magnitude higher, before a single
-      epoch of anything. Whether that is real early-layer motion or a noisier
-      fit at $d_\text{model}{=}3840$ is \textbf{not yet established}.
-    \item \textbf{The late partial retreat generalises upward.} 4b peaks $0.424$
-      @ 512 and walks back $19\%$; 12b peaks $0.472$ @ 2048 and walks back
-      $11\%$. 1b shows a hint ($-9\%$); 270m is flat.
-  \end{itemize}
+      now over five sizes: final relfro $0.249 < 0.279 < 0.343 < 0.421 < 0.466$,
+      and cosine falls monotonically $0.976 > 0.956 > 0.941 > 0.897 > 0.874$.
+      The one size trend every added arm \emph{strengthens} rather than breaks.
+      Cosines are \textbf{fp64-corrected} (see caveats) --- the old read-out's
+      bias grew with $d_\text{model}$, so correcting it steepens this trend.
+    \item \bad{The ``nothing moves for ${\sim}8$ steps'' claim is now false},
+      \good{and 27b says why}. It held at $\leq 0.008$ for 270m/1b/4b; 12b reads
+      $0.055$ at step 2 and 27b $0.060$ --- two independent $d_\text{model}$
+      reproducing it. That favours \textbf{real early motion at large models}
+      over a noisy fit at $3840$ specifically, which was the open alternative.
+    \item \bad{The late partial retreat does \emph{not} generalise upward.}
+      4b walks back $19\%$ from its 512 peak, 12b $11\%$ from 2048, 1b $9\%$,
+      270m flat --- but \textbf{27b plateaus without retreating}
+      ($0.466 / 0.465 / 0.466$ at 2048 / 4096 / 4882). The retreat is a
+      middle-sizes phenomenon, not a large-model one.
+  \end{itemize}}
   \vfill
-  {\footnotesize Robust under either the layer mean or the per-layer max. The
-  12b early-step reading is the one number on this slide to treat as
-  provisional.}
+  {\scriptsize Robust under either drift measure. $^\dagger$27b's last three
+  points are tied to $\pm0.0006$ --- a plateau, not a late climb.}
 \end{frame}
 
 \begin{frame}{1. Drift --- \texttt{4b-it}}
   \centering
   \includegraphics[height=0.72\textheight]{4b_it_full/fig_drift.pdf}
 
-  {\footnotesize The cosine panel reads slightly \emph{above} 1.0 at steps
-  2--8. Cosine cannot exceed 1: this is fp32 dot-product accumulation over
-  ${\sim}6.5$M entries per layer while the norms use a stabler path. It is
-  visible only where drift is ${\approx}0$ and affects no step $\geq 16$.}
+  {\footnotesize The cosine panel is \textbf{fp64-corrected}. It previously read
+  \emph{above} 1.0 at steps 2--8 --- not a small-drift curiosity but the visible
+  tip of a bias present at every step, worth ${\sim}0.26$pp here and growing with
+  $d_\text{model}$. See caveats.}
 \end{frame}
 
 % ---------------------------------------------------------------- faithfulness
-\begin{frame}{2--3. Faithfulness vs.\ size --- \bad{the size trend does not survive 12b}}
+\begin{frame}{2--3. Faithfulness vs.\ size --- \bad{not monotone; it turns over at 4b}}
   \small
   Lens$\leftrightarrow$model KL, mean over the last $n/5$ layers
   (the probe's \texttt{kl\_final}) --- \emph{lower = lens predicts the model
@@ -354,39 +365,45 @@
                      & $4.683 \rightarrow 5.867$ \; (\bad{$\mathbf{+1.19}$})
                      & $4.088 \rightarrow 5.715$ \; (\bad{$+1.63$}) \\
     \texttt{12b-it}  & $3.959 \rightarrow 5.251$ \; (\bad{$+1.29$})
-                     & $8.584 \rightarrow 6.606$ \; (\good{$\mathbf{-1.98}$})
-                     & $7.267 \rightarrow 9.578$ \; (\bad{$\mathbf{+2.31}$}) \\
+                     & $8.584 \rightarrow 6.606$ \; (\good{$-1.98$})
+                     & $7.267 \rightarrow 9.578$ \; (\bad{$+2.31$}) \\
+    \texttt{27b-it}  & $7.555 \rightarrow 7.308$ \; (\good{$\mathbf{-0.25}$})
+                     & $16.308 \rightarrow 10.049$ \; (\good{$\mathbf{-6.26}$})
+                     & $11.782 \rightarrow 15.344$ \; (\bad{$\mathbf{+3.56}$}) \\
     \midrule
-    \multicolumn{4}{l}{\footnotesize top-1 \texttt{medical}: \;
+    \multicolumn{4}{l}{\scriptsize top-1 \texttt{medical}: \;
       270m $0.260 \rightarrow 0.260$ \quad
       1b $0.448 \rightarrow$ \good{$0.572$} \quad
       4b $0.677 \rightarrow$ \bad{$0.660$} \quad
-      12b $0.596 \rightarrow$ \good{$0.720$}} \\
+      12b $0.596 \rightarrow$ \good{$0.720$} \quad
+      27b $0.587 \rightarrow$ \good{$\mathbf{0.737}$}} \\
     \bottomrule
   \end{tabular}
 
-  \vspace{0.5em}
-  {\footnotesize
-  \begin{itemize}\setlength{\itemsep}{0.1em}
+  \vspace{0.2em}
+  {\scriptsize
+  \begin{itemize}\setlength{\itemsep}{0.25em}
     \item \bad{\textbf{``Monotone in size'' is dead on \texttt{general}}}:
-      $+0.09 / +0.54 / +2.08 / \mathbf{+1.29}$ turns over at 12b. Only
-      \texttt{multihop} --- the one externally-sourced cue --- is still monotone.
-    \item \bad{\textbf{``Medical is not protected'' is dead too}}, in the other
-      direction: 12b's $-1.98$ is the largest protective move at any size, and
-      top-1 agrees ($+0.124$). On four points, 4b is the anomaly.
-    \item \bad{\textbf{And ``bigger models start more faithful'' fails at
-      $t{=}0$}}: base \texttt{general} KL runs $3.41 / 2.68 / 2.16 /
-      \mathbf{3.96}$.
-    \item \textbf{What is held.} Three readings survive four points: the cost
-      peaks at 4b and falls; 12b is anomalous; or these deltas are not a
-      function of size at all. \textbf{27b discriminates the first two} --- but
-      a single LR cannot separate ``size'' from ``a fixed
-      lr\,$1\mathrm{e}{-5}$ growing too large,'' and a non-monotone curve is
-      that confound's signature.
+      $+0.09 / +0.54 / +2.08 / +1.29 / \mathbf{-0.25}$ is an \textbf{inverted U
+      peaking at 4b and crossing zero by 27b}. 12b was the descending limb, not
+      an anomaly. \texttt{multihop} alone stays monotone --- \bad{but on the
+      layer mean only; at 27b its final layer reads $-0.02$.}
+    \item \bad{\textbf{``Medical is not protected'' is dead too}}, oppositely:
+      $-0.05 / -0.37 / \mathbf{+1.19} / -1.98 / \mathbf{-6.26}$ --- protection
+      \textbf{deepens with size}, top-1 agrees ($+0.150$ at 27b, the largest of
+      any arm), and \textbf{4b is the sole outlier on both cues}.
+    \item \good{\textbf{The real result: drift and cost decouple.}} relfro
+      rises monotonically with size ($0.249 \to 0.466$) while the general-cue
+      cost falls to nothing --- \textbf{27b moves most and pays least}. Movement
+      is not infidelity; the glossary asserted that, this measures it.
+    \item \textbf{Not settled:} $-6.26$ nats is partly \textbf{headroom} --- 27b
+      starts least faithful of all ($7.55$ / $16.31$), and against its own base
+      the protection series is $-0.9 / -7.9 / \mathbf{+25} / -23 / \mathbf{-38}\%$.
+      An inverted U is also what \textbf{one fixed LR} would draw.
   \end{itemize}}
 \end{frame}
 
-\begin{frame}{2--3. All four arms on one axis}
+\begin{frame}{2--3. All five arms on one axis}
   \centering
   \includegraphics[width=0.82\textwidth]{arms/fig_arms.pdf}
 
@@ -400,7 +417,7 @@
   it.}
 \end{frame}
 
-\begin{frame}{2--3. What survives the 12b arm}
+\begin{frame}{2--3. What survives all five arms}
   \small
   Both headline size claims reversed, but the trajectory data are not
   uninformative. One statement holds at \textbf{every} size:
@@ -415,34 +432,37 @@
     \texttt{1b-it}   & \good{$-0.37$} & \bad{$+0.54$} & \bad{$+1.01$} & least damaged \\
     \texttt{4b-it}   & \bad{$+1.19$}  & \bad{$+2.08$} & \bad{$+1.63$} & least damaged \\
     \texttt{12b-it}  & \good{$-1.98$} & \bad{$+1.29$} & \bad{$+2.31$} & least damaged \\
+    \texttt{27b-it}  & \good{$-6.26$} & \good{$-0.25$} & \bad{$+3.56$} & least damaged \\
     \bottomrule
   \end{tabular}
 
-  \vspace{1.0em}
+  \vspace{0.6em}
+  {\footnotesize
   \begin{itemize}\setlength{\itemsep}{0.2em}
-    \item \good{\textbf{Medical is the least-damaged cue at all four sizes}}
-      --- by $0.14$ / $0.91$ / $0.90$ / $3.27$ nats over \texttt{general}. This
-      is the finding that has held from two arms to four, and it is
-      \emph{directional}, so it does not depend on the cross-size absolute
-      comparison the deck forbids.
+    \item \good{\textbf{Medical is the least-damaged cue at all five sizes}}
+      --- by $0.14 / 0.91 / 0.90 / 3.27 / \mathbf{6.01}$ nats over \texttt{general},
+      a margin that \textbf{widens with size}. The only claim that has held from
+      two arms to five, and it is \emph{directional} --- so it does not rest on
+      the cross-size absolute comparison the deck forbids.
     \item \textbf{Medical SFT buys the medical cue relative ground at every
       size.} Whether it also buys \emph{absolute} ground is what flips: yes at
-      270m/1b/12b, no at 4b.
-    \item \bad{Do not read this as ``medical improves.''} At 4b it degrades;
-      the claim is only that it degrades \emph{less} than everything else.
-  \end{itemize}
+      270m/1b/12b/27b, no at 4b --- so on five points the absolute claim holds
+      everywhere \emph{except} 4b.
+    \item \bad{Not ``medical improves'' generally} --- at 4b it degrades; the
+      universal claim is only that it degrades \emph{less}. \good{27b does both.}
+  \end{itemize}}
   \vfill
-  {\footnotesize \good{Read-out check.} Layer mean and single final layer agree
-  in sign on all three cues at 4b and 12b. The lone sign flip in this study
-  remains 270m \texttt{medical} --- see the read-out caveat.}
+  {\scriptsize \good{Read-out check.} Both cues this slide rests on agree in sign
+  across read-outs at every size but 270m. \bad{27b \texttt{multihop} flips}
+  ($+3.56$ mean vs.\ $-0.02$ final) --- two flips in five arms; see the caveat.}
 \end{frame}
 
 \begin{frame}{2--3. The domain gap narrows at every size --- by three mechanisms}
   \small
   \begin{columns}[T]
     \begin{column}{0.53\textwidth}
-      Within each arm the \texttt{medical} cue starts $2$--$4.6$ nats less
-      faithful than \texttt{general}. \textbf{All four arms narrow that gap}
+      Within each arm the \texttt{medical} cue starts $2$--$8.8$ nats less
+      faithful than \texttt{general}. \textbf{All five arms narrow that gap}
       --- but not by the same mechanism.
       \vspace{0.4em}
 
@@ -454,7 +474,8 @@
         \texttt{270m-it} & 1.981 & 1.843 & $-0.138$ & both ends \\
         \texttt{1b-it}   & 1.998 & 1.085 & $-0.912$ & both ends \\
         \texttt{4b-it}   & 2.520 & 1.624 & $-0.895$ & \bad{general only} \\
-        \texttt{12b-it}  & 4.625 & 1.355 & $\mathbf{-3.271}$ & both ends \\
+        \texttt{12b-it}  & 4.625 & 1.355 & $-3.271$ & both ends \\
+        \texttt{27b-it}  & 8.753 & 2.741 & $\mathbf{-6.012}$ & both ends \\
         \bottomrule
       \end{tabular}
 
@@ -470,9 +491,8 @@
       on its own.
       \vspace{0.3em}
 
-      12b starts with by far the widest gap ($4.63$) and closes three quarters
-      of it. \texttt{multihop} degrades at \emph{all four} sizes
-      ($+0.02 / +1.01 / +1.63 / +2.31$).
+      \textbf{27b closes the widest gap ($8.75$) by 69\%}, from both ends.
+      \texttt{multihop} degrades at \emph{all five} sizes.
     \end{column}
     \begin{column}{0.45\textwidth}
       \centering
@@ -481,7 +501,7 @@
       \vspace{0.3em}
       {\scriptsize The 12b panel: medical (upper) falls hard toward general
       (lower), which rises --- the ``both ends'' shape. Contrast the 4b panel,
-      where both curves rise away from their dashed $t{=}0$ baselines. All four
+      where both curves rise away from their dashed $t{=}0$ baselines. All five
       arms are on the previous slide.}
     \end{column}
   \end{columns}
@@ -554,7 +574,7 @@
           seed=0}, recorded as \texttt{judge\_decode}. Before this date each
           provider sampled at its own default, so ``the judge'' was frozen at
           the model level only.
-        \item \good{All four arms are now judge-scored by the same judge},
+        \item \good{All five arms are now judge-scored by the same judge},
           which is what makes the cross-size table on the next slide legitimate.
       \end{itemize}}
     \end{column}
@@ -572,14 +592,14 @@
   floating-point ties.}
 \end{frame}
 
-\begin{frame}{4. Behavior --- all four arms, one instrument}
+\begin{frame}{4. Behavior --- all five arms, one instrument}
   \small
   Judge-scored at \texttt{rp}$=$\texttt{1.1}. \textbf{Answered} accuracy, with
   answer rate in parentheses. $t{=}0$ is each arm's untuned base.
 
-  \vspace{0.5em}
+  \vspace{0.3em}
   \centering
-  {\footnotesize
+  {\scriptsize
   \begin{tabular}{lccc}
     \toprule
     & MedQA & MedMCQA & PubMedQA \\
@@ -599,18 +619,22 @@
     \texttt{12b-it} $t{=}0$   & 70.0 \; (100\%) & 58.8 \; (100\%) & 56.4 \; (100\%) \\
     \texttt{12b-it} final     & \good{\textbf{71.0}} \; (98.8\%) & \good{\textbf{65.0}} \; (99.5\%) & \good{\textbf{78.0}} \; (100\%) \\
     \quad $\Delta$            & \good{$+1.0$} & \good{$+6.2$} & \good{$+21.6$} \\
+    \addlinespace
+    \texttt{27b-it} $t{=}0$   & 77.1 \; (100\%) & 63.6 \; (99.9\%) & 61.6 \; (100\%) \\
+    \texttt{27b-it} final     & \good{\textbf{77.3}} \; (99.6\%) & \good{\textbf{64.4}} \; (98.6\%) & \good{\textbf{79.2}} \; (100\%) \\
+    \quad $\Delta$            & \good{$+0.1$} & \good{$+0.9$} & \good{$+17.6$} \\
     \bottomrule
   \end{tabular}}
 
   \vspace{0.4em}
   {\footnotesize
   \begin{itemize}\setlength{\itemsep}{0.1em}
-    \item \bad{\textbf{270m is the only arm that gets worse}} --- and not by
-      format churn: its answer rate \emph{improves} on two of three benchmarks
-      while answered accuracy falls on all three.
-    \item \textbf{The gain is bounded by headroom, not size.} 12b gains $+1.0$
-      on MedQA from a base of $70.0$, but $+21.6$ on PubMedQA from $56.4$ ---
-      the largest single gain in the study.
+    \item \bad{\textbf{270m is the only arm that gets worse}} --- not by format
+      churn: its answer rate \emph{improves} on two of three while answered
+      accuracy falls on all three.
+    \item \textbf{The gain is bounded by headroom, not size.} \good{27b:}
+      $+0.1 / +0.9$ from bases of $77.1 / 63.6$, but $+17.6$ on PubMedQA from
+      $61.6$ --- \textbf{the largest arm gains least where it knows most}.
   \end{itemize}}
 \end{frame}
 
@@ -677,6 +701,16 @@
   \includegraphics[height=0.80\textheight]{1b_it_full_v3_rp11/fig_joined.pdf}
 \end{frame}
 
+\begin{frame}{4. Joined behavioral + lens trajectory --- \texttt{27b-it}}
+  \centering
+  \includegraphics[height=0.76\textheight]{27b_it_full_rp11/fig_joined.pdf}
+
+  {\footnotesize \textbf{The one arm that dips and recovers.} MedQA and MedMCQA
+  fall ${\sim}9$pp to a trough at steps 128--1024, then return to base by 4096;
+  PubMedQA rises throughout. \bad{So its $\Delta$ of ${+}0.1 / {+}0.9$ is a round
+  trip, not a flat line} --- read the table slide with that in mind.}
+\end{frame}
+
 \begin{frame}{4. Joined behavioral + lens trajectory --- \texttt{270m-it}}
   \centering
   \includegraphics[height=0.76\textheight]{270m_it_full_rp11/fig_joined.pdf}
@@ -691,7 +725,7 @@
 % ---------------------------------------------------------------- timing
 \begin{frame}{5. Timing holds; the correlation behind it does not}
   \small
-  \textbf{The ordering is the robust part}, and it holds at all four sizes ---
+  \textbf{The ordering is the robust part}, and it holds at all five sizes ---
   \texttt{4b-it} shown:
 
   \vspace{0.4em}
@@ -722,6 +756,7 @@
     \texttt{1b-it}   & $-0.33$ / $+0.11$ & $-0.20$ / $+0.05$ & $-0.31$ / $+0.73$ \\
     \texttt{4b-it}   & $-0.47$ / $+0.06$ & $-0.65$ / $+0.15$ & $-0.27$ / $+0.57$ \\
     \texttt{12b-it}  & $-0.48$ / $-0.49$ & $-0.48$ / $+0.07$ & --- / $+0.90$ \\
+    \texttt{27b-it}  & $-0.38$ / $-0.45$ & $-0.73$ / $-0.31$ & --- / $+0.92$ \\
     \bottomrule
   \end{tabular}}
 
@@ -729,9 +764,9 @@
   {\footnotesize
   \begin{itemize}\setlength{\itemsep}{0.1em}
     \item The old $\mathbf{-0.91}$ on 4b MedMCQA is now $-0.65$, and the sign
-      \bad{flips outright at 270m} ($+0.92$) --- there answer rate \emph{rises}
-      over training. (PubMedQA at 12b is \texttt{---}: answer rate is exactly
-      $100.0\%$ at every checkpoint, so $r$ is undefined.)
+      \bad{flips outright at 270m} ($+0.92$); \textbf{27b adds no support}
+      ($-0.38$ on MedQA). (PubMedQA at 12b/27b is \texttt{---}: answer rate is
+      exactly $100.0\%$ at every checkpoint, so $r$ is undefined.)
     \item \textbf{With format compliance pinned near $100\%$ by the decoding,
       there is almost no variance in answer rate left to correlate with.} The
       old $r$ was measuring an artifact of greedy decoding.
@@ -748,7 +783,7 @@
     \item \textbf{Top-1 is coarse.} $n{=}50$ prompts for
       \texttt{general}/\texttt{medical} ($93$ for \texttt{multihop}), so
       \emph{per-layer} top-1 quantizes at $0.02$; the reported statistic
-      averages 3 / 5 / 6 / 9 layers, giving a $1/150$--$1/450$ grain that
+      averages 3 / 5 / 6 / 9 / 12 layers, giving a $1/150$--$1/600$ grain that
       makes small moves look more precise than they are. Single-checkpoint
       wiggles of $\pm 0.04$ are still noise. \emph{Trust the KL trends, not
       top-1.}
@@ -756,13 +791,27 @@
       KL disagree in sign on 270m medical. Every claim here uses the layer mean;
       an earlier draft of this deck used the final layer and reported a
       270m$\leftrightarrow$1b \emph{inversion} that does not survive. Report the
-      statistic, not just the number. \good{(It does not recur at 4b.)}
-    \item \textbf{A numerical artifact in the drift cosine.} At 4b steps 2--8,
-      \texttt{cos\_mean} reads $1.001$--$1.003$; cosine cannot exceed 1. The
-      fp32 \texttt{dot} over ${\sim}6.5$M entries per layer is biased against
-      the stabler norm computation. Only visible where drift ${\approx}0$; no
-      reported claim depends on it, but \texttt{jac\_drift} should accumulate
-      in fp64.
+      statistic, not just the number. \bad{It recurs at 27b} --- \texttt{multihop}
+      reads $+3.56$ on the layer mean and $-0.02$ at the final layer, so the
+      still-monotone-multihop reading is layer-mean-only. Two flips in five arms;
+      neither is on a cue carrying a headline claim, but the rate is not zero.
+    \item \textbf{The drift cosine was biased --- diagnosed and fixed
+      (2026-08-10).} \texttt{jac\_drift} divided an fp32 \texttt{torch.dot}
+      (accurate to $6{\times}10^{-6}$) by fp32
+      \texttt{torch.linalg.vector\_norm}, which \emph{under}estimates $\|J\|$ by
+      $0.69\%$ at 27b: it accumulates $d_\text{model}^2$ terms until the
+      smallest are absorbed. \good{An earlier draft of this slide blamed
+      \texttt{dot} and called it harmless --- both wrong.} Diagnostic:
+      $\cos(J_0,J_0)$, exactly $1$ by definition, evaluated to $1.0138$.
+      The bias is positive at \emph{every} step and size and grows with
+      $d_\text{model}$ ($0.01 \to 0.02 \to 0.26 \to 0.47 \to 1.4$pp for
+      270m$\to$27b), so it was a \textbf{cross-size} bias inside a cross-size
+      claim (finding 1). \texttt{jac\_drift} now accumulates in fp64; 270m--12b
+      are retro-corrected in place (\texttt{scripts/correct\_drift\_cos.py},
+      raw kept as \texttt{cos\_*\_fp32raw}), 27b is not yet. Finding 1 survives
+      and steepens; nothing else in the deck reads the cosine.
+      \texttt{relfro} is left uncorrected --- both its terms are norms, so the
+      bias largely cancels and ${\sim}+0.1\%$ relative survives at 4b.
     \item \textbf{The \texttt{general}/\texttt{medical} cues are
       hand-authored}, not sampled from a corpus --- the domain-gap result
       inherits whatever bias is in those 100 prompts. \texttt{multihop} is the
@@ -773,20 +822,20 @@
 \begin{frame}{Caveats --- the scope}
   \small
   \begin{itemize}\setlength{\itemsep}{0.7em}
-    \item \bad{\textbf{Four sizes is still not a scaling curve.}} The 12b arm
-      did not extend the trend it was run to test --- it reversed it, on both
-      \texttt{general} and \texttt{medical}. Four points spanning ${\sim}44\times$
-      in parameters now show one non-monotone cue, one monotone cue, and a
-      medical cue whose sign alternates. \textbf{27b arbitrates 4b-vs-12b but
-      cannot make four noisy points into a curve.}
+    \item \bad{\textbf{Five sizes is still not a scaling curve.}} 27b settled
+      \emph{which} shape the \texttt{general} cue has --- an inverted U peaking
+      at 4b --- but five points spanning ${\sim}100\times$ in parameters is four
+      intervals, and the turning point rests on \textbf{one arm} (4b), which is
+      also the one unexplained outlier. \textbf{A shape identified from its own
+      outlier is a hypothesis, not a scaling law.}
     \item \bad{\textbf{One hyperparameter setting --- now the load-bearing
-      caveat.}} All four arms are full FT at lr $1\mathrm{e}{-5}$ on one
+      caveat.}} All five arms are full FT at lr $1\mathrm{e}{-5}$ on one
       mixture. Whether these deltas are about \emph{size}, or about a fixed LR
-      being progressively too large as the model grows, is not separable from
-      these runs --- and \textbf{a non-monotone \texttt{general} curve is
-      exactly that confound's signature}. The decisive experiment is a second
-      LR at one size, not a fifth size.
-    \item \good{\textbf{The behavioral instrument is finally uniform}} --- four
+      acting differently as the model grows, is not separable from these runs ---
+      and \textbf{an inverted-U \texttt{general} curve is exactly that confound's
+      signature}. \good{Adding 27b did not weaken this caveat; it sharpened it.}
+      The decisive experiment is a second LR at one size, not a sixth size.
+    \item \good{\textbf{The behavioral instrument is finally uniform}} --- five
       arms, one decode config, one judge, judged $t{=}0$ baselines for all.
       Cross-size behavioral comparison is legitimate for the first time.
       \bad{The cost:} every behavioral number predating 2026-08-05 is void, and
@@ -805,15 +854,17 @@
 % ---------------------------------------------------------------- next
 \begin{frame}{Next}
   \begin{enumerate}\setlength{\itemsep}{0.3em}
-    \item \textbf{Finish 27b} and settle findings 2--3. The behavioral half is
-      already decoded and judged at both \texttt{rp} values; the lens is 8/13
-      checkpoints in, at ${\sim}34$\,h per checkpoint. \textbf{This is the only
-      blocker on un-holding the two findings.}
     \item \bad{\textbf{A second LR at one size}} --- 4b or 12b at, say,
-      $3\mathrm{e}{-6}$. Now the highest-value experiment in the study: it is
-      the only thing that separates ``the cost is about size'' from ``the cost
-      is about a fixed LR being too large for a bigger model,'' and the 12b
-      reversal is what makes that ambiguity load-bearing rather than pedantic.
+      $3\mathrm{e}{-6}$. \textbf{The highest-value experiment in the study}, and
+      more so now: the inverted U is settled as a \emph{shape}, but an inverted U
+      is also exactly what ``a fixed lr\,$1\mathrm{e}{-5}$ acting differently at
+      different scales'' would draw. Finding the turnover does not disambiguate
+      it --- only a second LR does.
+    \item \bad{\textbf{Explain 4b}} --- across five points it is the only arm
+      that loses faithfulness on the medical cue, and the peak of the general
+      cost. Re-verify its trajectory before the anomaly is theorised about: it is
+      the smallest size on the \texttt{Gemma3ForConditionalGeneration} load path,
+      so a provenance check comes before an explanation.
     \item \textbf{Widen the \texttt{general}/\texttt{medical} cues} beyond the
       100 hand-authored prompts, to check the domain-gap collapse is not an
       artifact of how those pairs were written. 12b's $4.63$-nat starting gap
@@ -824,12 +875,11 @@
       probe set to place the trajectory endpoints on an absolute scale.
   \end{enumerate}
   \vfill
-  {\footnotesize Answered since the last version: \textbf{270m and 1b are
-  re-judged}, so all four arms share one instrument; \textbf{the 12b arm exists}
-  end to end. \bad{Retracted since the last version:} the size-monotone
-  faithfulness cost (finding 2), medical-is-not-protected (finding 3), and
-  drift-leads-format-collapse at $r=-0.91$ (finding 5) --- the first two by 12b,
-  the third by the decode fix.}
+  {\scriptsize Answered since the last version: \textbf{27b exists end to end}, so
+  findings 2--3 are settled rather than held. \bad{Nothing newly retracted} ---
+  the three standing retractions (size-monotone cost, medical-is-not-protected,
+  drift-leads-format-collapse at $r{=}-0.91$) were made by 12b and the decode
+  fix; 27b only confirms the first two.}
 \end{frame}
 
 \begin{frame}{Data provenance}
@@ -869,7 +919,7 @@
   \texttt{270m\_verify} (Phase-0 smoke test).}
 \end{frame}
 
-\begin{frame}{Data provenance --- the behavioral instrument (all four arms)}
+\begin{frame}{Data provenance --- the behavioral instrument (all five arms)}
   \small
   \begin{tabular}{ll}
     \toprule
@@ -879,12 +929,12 @@
                & \texttt{repetition\_penalty=1.1, seed=0} \; \textbf{frozen 2026-08-05} \\
     Scorer     & \texttt{gemma\_med.judge} (replaces \texttt{answer\_parsing.py}) \\
     Provider   & \texttt{local} --- the lab's self-hosted Kimi, BigPurple only \\
-    Judge model& \texttt{Barney} \; \textbf{frozen for all four trajectories} \\
+    Judge model& \texttt{Barney} \; \textbf{frozen for all five trajectories} \\
     Judge decode& \texttt{temperature=0.0, seed=0} \; \textbf{also frozen 2026-08-05} \\
     Verdicts   & \texttt{correct} / \texttt{incorrect} / \texttt{no\_answer},
                  schema-constrained \\
     Judgments  & \texttt{eval/traj/*\_rp11/step-*/*\_judgments.jsonl} \\
-    Provenance & \texttt{.../step-*/judged\_summary.json} (13/14/13/13 files) \\
+    Provenance & \texttt{.../step-*/judged\_summary.json} (13/14/13/13/13 files) \\
     \bottomrule
   \end{tabular}
 
