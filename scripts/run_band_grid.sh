@@ -21,6 +21,14 @@
 #   scripts/run_band_grid.sh            # submit everything
 #   DRY_RUN=1 scripts/run_band_grid.sh  # print what would be submitted
 #   ARMS="270m 1b" scripts/run_band_grid.sh   # a subset
+#
+# PARTITION/GRES/NODE steer placement, and are passed through to the fanout
+# workers so an arm's base probe and its 13 workers land in the same place:
+#   # big arms on one dedicated 8-GPU node
+#   ARMS="4b 12b 27b" NODE=sp-0006 scripts/run_band_grid.sh
+#   # small arms wherever a GPU frees up first -- any partition, any vendor
+#   ARMS="270m 1b" PARTITION=superpod,oermannlab,a100_short,a100_long \
+#       GRES=gpu:1 scripts/run_band_grid.sh
 set -euo pipefail
 
 REPO=/gpfs/data/oermannlab/users/zhouj14/gemma_med_ft
@@ -85,6 +93,7 @@ for SIZE in $ARMS; do
     [[ -n $CKA_TOKENS ]] && base_export+=",CKA_TOKENS=$CKA_TOKENS"
 
     base_id=$(sbatch --parsable --partition="$PARTITION" --gres="$GRES" \
+        ${NODE:+--nodelist="$NODE"} ${TIME:+--time="$TIME"} \
         --job-name="bd${SIZE}_base" \
         --output="$BAND_OUT/bd${SIZE}_base_%j.out" \
         --error="$BAND_OUT/bd${SIZE}_base_%j.err" \
@@ -92,6 +101,7 @@ for SIZE in $ARMS; do
     echo "    base probe: job $base_id"
 
     fan_env="SIZE=$SIZE KIND=it RUN_DIR=$RUN_DIR SRC=$SRC PARTITION=$PARTITION GRES=$GRES"
+    [[ -n ${NODE:-} ]] && fan_env+=" NODE=$NODE"
     [[ -n $BASE_MODEL ]] && fan_env+=" BASE_MODEL=$BASE_MODEL"
     [[ -n $DIM_BATCH ]] && fan_env+=" DIM_BATCH=$DIM_BATCH"
     [[ -n $CKA_TOKENS ]] && fan_env+=" CKA_TOKENS=$CKA_TOKENS"
