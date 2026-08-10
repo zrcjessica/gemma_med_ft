@@ -14,8 +14,9 @@
 set -euo pipefail
 
 REPO=/gpfs/data/oermannlab/users/zhouj14/gemma_med_ft
-SRC=${SRC:-/gpfs/home/zhouj14/jlens_out/4b_it}
-DEST=${DEST:-/gpfs/home/zhouj14/jlens_out/4b_it_fanout}
+JLENS_OUT=${JLENS_OUT:-/gpfs/data/oermannlab/users/zhouj14/jlens_out}
+SRC=${SRC:-$JLENS_OUT/4b_it}
+DEST=${DEST:-$JLENS_OUT/4b_it_fanout}
 RUN_DIR=${RUN_DIR:-$REPO/outputs/4b/full_lr1e-5_25911616}
 BASE=${BASE:-$REPO/data/text_bases/4b_it}
 NODE=${NODE:-sp-0006}

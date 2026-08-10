@@ -10,3 +10,7 @@ wandb/
 .env
 barney.local.env
 eval/**/*_predictions.jsonl
+
+# macOS resource forks / metadata (arrive via rsync from mounted volumes)
+._*
+.DS_Store

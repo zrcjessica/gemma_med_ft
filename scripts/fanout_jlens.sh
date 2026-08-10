@@ -28,8 +28,11 @@ REPO=/gpfs/data/oermannlab/users/zhouj14/gemma_med_ft
 : "${SIZE:?SIZE must be set (4b|12b|27b)}"
 : "${RUN_DIR:?RUN_DIR must be set (dir containing checkpoint-*/)}"
 KIND=${KIND:-it}
-SRC=${SRC:-/gpfs/home/zhouj14/jlens_out/${SIZE}_${KIND}}
-DEST=${DEST:-/gpfs/home/zhouj14/jlens_out/${SIZE}_${KIND}_fanout}
+# On the project fileset, not /gpfs/home: a 27b base lens is 7 GB and the
+# fanout keeps one per size, which the home quota will not hold.
+JLENS_OUT=${JLENS_OUT:-/gpfs/data/oermannlab/users/zhouj14/jlens_out}
+SRC=${SRC:-$JLENS_OUT/${SIZE}_${KIND}}
+DEST=${DEST:-$JLENS_OUT/${SIZE}_${KIND}_fanout}
 BASE=${BASE:-$REPO/data/text_bases/${SIZE}_${KIND}}
 PARTITION=${PARTITION:-superpod}
 GRES=${GRES:-gpu:h100:1}
