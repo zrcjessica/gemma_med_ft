@@ -145,10 +145,16 @@ def concordance(lens, model, probes, position):
 
 
 def jac_drift(base_jac, lens):
+    # fp64 throughout: J_l has d_model^2 entries (28.9M at 27b), and fp32
+    # torch.linalg.vector_norm accumulates them into one running sum until the
+    # smallest terms are absorbed -- it underestimates |J| by 0.69% at 27b while
+    # torch.dot (blocked accumulation) stays exact. Mixing the two made cos
+    # exceed 1.0 by up to 1.5pp, growing with d_model, so the bias was also
+    # cross-size. Doubling costs 2x transient RAM per layer, not per lens.
     rel, cos = [], []
     for L in lens.source_layers:
-        Jt = lens.jacobians[L].detach().float().cpu().flatten()
-        J0 = base_jac[L].flatten()
+        Jt = lens.jacobians[L].detach().double().cpu().flatten()
+        J0 = base_jac[L].flatten().double()
         n0 = torch.linalg.vector_norm(J0)
         rel.append(float(torch.linalg.vector_norm(Jt - J0) / (n0 + 1e-8)))
         nt = torch.linalg.vector_norm(Jt)
