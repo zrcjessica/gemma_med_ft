@@ -38,7 +38,7 @@
     "step": 2,
     "lens": {
       "drift_relfro_max": 0.032234206795692444,
-      "drift_cos_min": 1.001020073890686,
+      "drift_cos_min": 0.999470908331695,
       "kl_general_layermean": 2.180461141625399,
       "kl_medical_layermean": 4.701426054816815,
       "top1_general_layermean": 0.8533333333333334,
@@ -73,7 +73,7 @@
     "step": 4,
     "lens": {
       "drift_relfro_max": 0.025598302483558655,
-      "drift_cos_min": 1.0011719465255737,
+      "drift_cos_min": 0.9996615546893505,
       "kl_general_layermean": 2.1501316721396218,
       "kl_medical_layermean": 4.677233386810694,
       "top1_general_layermean": 0.8533333333333334,
@@ -108,7 +108,7 @@
     "step": 8,
     "lens": {
       "drift_relfro_max": 0.02658304013311863,
-      "drift_cos_min": 1.0011554956436157,
+      "drift_cos_min": 0.999640014745071,
       "kl_general_layermean": 2.1573842667308543,
       "kl_medical_layermean": 4.663090873419715,
       "top1_general_layermean": 0.8533333333333334,
@@ -143,7 +143,7 @@
     "step": 16,
     "lens": {
       "drift_relfro_max": 0.1330958902835846,
-      "drift_cos_min": 0.9945163130760193,
+      "drift_cos_min": 0.9928138159945776,
       "kl_general_layermean": 2.1035315564828916,
       "kl_medical_layermean": 4.487551867985167,
       "top1_general_layermean": 0.85,
@@ -178,7 +178,7 @@
     "step": 32,
     "lens": {
       "drift_relfro_max": 0.3311711847782135,
-      "drift_cos_min": 0.9472216963768005,
+      "drift_cos_min": 0.9447981104646879,
       "kl_general_layermean": 2.1209327443448514,
       "kl_medical_layermean": 4.478282862445339,
       "top1_general_layermean": 0.8666666666666667,
@@ -213,7 +213,7 @@
     "step": 64,
     "lens": {
       "drift_relfro_max": 0.4569351077079773,
-      "drift_cos_min": 0.8995886445045471,
+      "drift_cos_min": 0.8972869337499716,
       "kl_general_layermean": 2.947632476762131,
       "kl_medical_layermean": 5.1889996505187215,
       "top1_general_layermean": 0.8466666666666667,
@@ -248,7 +248,7 @@
     "step": 128,
     "lens": {
       "drift_relfro_max": 0.4745747447013855,
-      "drift_cos_min": 0.8912158608436584,
+      "drift_cos_min": 0.88921603312658,
       "kl_general_layermean": 3.4814863896897683,
       "kl_medical_layermean": 5.295428996467963,
       "top1_general_layermean": 0.8300000000000001,
@@ -283,7 +283,7 @@
     "step": 256,
     "lens": {
       "drift_relfro_max": 0.4900006651878357,
-      "drift_cos_min": 0.8887779116630554,
+      "drift_cos_min": 0.8869060553585317,
       "kl_general_layermean": 4.108283750138555,
       "kl_medical_layermean": 5.757256468702107,
       "top1_general_layermean": 0.8466666666666666,
@@ -318,7 +318,7 @@
     "step": 512,
     "lens": {
       "drift_relfro_max": 0.5308223366737366,
-      "drift_cos_min": 0.8666054010391235,
+      "drift_cos_min": 0.8651218726679626,
       "kl_general_layermean": 4.394815469016321,
       "kl_medical_layermean": 5.961551455305887,
       "top1_general_layermean": 0.8533333333333332,
@@ -353,7 +353,7 @@
     "step": 1024,
     "lens": {
       "drift_relfro_max": 0.5130571126937866,
-      "drift_cos_min": 0.8754752278327942,
+      "drift_cos_min": 0.8735724761963946,
       "kl_general_layermean": 4.442465902356585,
       "kl_medical_layermean": 6.178850920642726,
       "top1_general_layermean": 0.8466666666666667,
@@ -388,7 +388,7 @@
     "step": 2048,
     "lens": {
       "drift_relfro_max": 0.5075907707214355,
-      "drift_cos_min": 0.8721950650215149,
+      "drift_cos_min": 0.870358133871662,
       "kl_general_layermean": 4.546910007043043,
       "kl_medical_layermean": 6.007426812881217,
       "top1_general_layermean": 0.85,
@@ -423,7 +423,7 @@
     "step": 4096,
     "lens": {
       "drift_relfro_max": 0.48199662566185,
-      "drift_cos_min": 0.8983020782470703,
+      "drift_cos_min": 0.8962779533275739,
       "kl_general_layermean": 4.288484840713402,
       "kl_medical_layermean": 5.921371446909228,
       "top1_general_layermean": 0.7799999999999999,
@@ -458,7 +458,7 @@
     "step": 4882,
     "lens": {
       "drift_relfro_max": 0.4788476228713989,
-      "drift_cos_min": 0.8994377255439758,
+      "drift_cos_min": 0.8974110416946393,
       "kl_general_layermean": 4.243078501790976,
       "kl_medical_layermean": 5.867307322847579,
       "top1_general_layermean": 0.7999999999999999,
