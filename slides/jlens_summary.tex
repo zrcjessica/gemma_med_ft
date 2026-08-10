@@ -806,9 +806,9 @@
       The bias is positive at \emph{every} step and size and grows with
       $d_\text{model}$ ($0.01 \to 0.02 \to 0.26 \to 0.47 \to 1.4$pp for
       270m$\to$27b), so it was a \textbf{cross-size} bias inside a cross-size
-      claim (finding 1). \texttt{jac\_drift} now accumulates in fp64; 270m--12b
+      claim (finding 1). \texttt{jac\_drift} now accumulates in fp64; all five arms
       are retro-corrected in place (\texttt{scripts/correct\_drift\_cos.py},
-      raw kept as \texttt{cos\_*\_fp32raw}), 27b is not yet. Finding 1 survives
+      raw kept as \texttt{cos\_*\_fp32raw}). Finding 1 survives
       and steepens; nothing else in the deck reads the cosine.
       \texttt{relfro} is left uncorrected --- both its terms are norms, so the
       bias largely cancels and ${\sim}+0.1\%$ relative survives at 4b.
