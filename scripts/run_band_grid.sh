@@ -38,6 +38,13 @@ PARTITION=${PARTITION:-superpod}
 GRES=${GRES:-gpu:h100:1}
 DRY_RUN=${DRY_RUN:-0}
 ARMS=${ARMS:-"270m 1b 4b 12b 27b"}
+# Always give the base probe a finite walltime. superpod defaults to UNLIMITED,
+# and an unlimited job is un-backfillable: the scheduler holds the node IDLE
+# rather than start it (Reason=Priority), and a capped partition rejects it
+# outright (Reason=PartitionTimeLimit). Base probes are metrics-only whenever a
+# t=0 lens is reused, so this is generous. See fanout_band.sh for the worker
+# side of the same rule.
+TIME=${TIME:-08:00:00}
 
 # size : run dir : base model ("" = resolve from the HF hub) : reusable t=0 lens
 # : dim_batch (lens-fit memory knob) : cka tokens

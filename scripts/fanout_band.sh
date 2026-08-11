@@ -42,6 +42,27 @@ SAVE_LENS=${SAVE_LENS:-1}
 QUIET_WORKERS=${QUIET_WORKERS:-1}
 [[ $QUIET_WORKERS == 0 ]] && QUIET_WORKERS=""
 
+# An explicit walltime is NOT optional, for two independent reasons:
+#   1. superpod's default is UNLIMITED, and an unlimited job cannot be
+#      backfilled -- the scheduler cannot prove it will finish before a
+#      higher-priority job needs the node, so it leaves the node IDLE and
+#      reports Reason=Priority. Observed exactly that: sp-0006 sat idle while
+#      three unlimited jobs waited on it.
+#   2. On a capped partition (a100_short, 3 days) an unlimited request is
+#      rejected outright with Reason=PartitionTimeLimit and waits forever.
+# Default generously from the measured fit rates (~(d_model x params)), with
+# headroom -- the 1b base fit ran 57 min against a ~25 min estimate.
+if [[ -z ${WORKER_TIME:-} ]]; then
+    case "$SIZE" in
+    270m) WORKER_TIME=06:00:00 ;;
+    1b)   WORKER_TIME=12:00:00 ;;
+    4b)   WORKER_TIME=1-00:00:00 ;;
+    12b)  WORKER_TIME=3-00:00:00 ;;
+    27b)  WORKER_TIME=7-00:00:00 ;;
+    *)    WORKER_TIME=1-00:00:00 ;;
+    esac
+fi
+
 # 4b+ must run against the pre-converted text-only base: transformers 5.14.1
 # does NOT remap the multimodal base's nested keys onto Gemma3ForCausalLM and
 # silently random-initializes instead, which would make t=0 meaningless.
@@ -76,6 +97,7 @@ for ck in "$RUN_DIR"/checkpoint-*; do
     # pure noise across a 66-worker grid, so workers stay silent by default and
     # notify_band.sbatch sends one message per ARM instead.
     id=$(sbatch --parsable --partition="$PARTITION" ${NODE:+--nodelist="$NODE"} --gres="$GRES" \
+        --time="$WORKER_TIME" \
         --job-name="bd${SIZE}_$n" \
         --output="$DEST/bd${SIZE}_${n}_%j.out" --error="$DEST/bd${SIZE}_${n}_%j.err" \
         --export=ALL,SIZE="$SIZE",KIND="$KIND"${BASE_MODEL:+,BASE_MODEL="$BASE_MODEL"},CKPTS="$ck",OUT="$o",ARM="${SIZE}_${KIND}",SAVE_LENS="$SAVE_LENS",REQUEUE_ON_GPU_FAIL=0${QUIET_WORKERS:+,QUIET_SLACK=1}${DIM_BATCH:+,DIM_BATCH=$DIM_BATCH}${CKA_TOKENS:+,CKA_TOKENS=$CKA_TOKENS} \
@@ -83,7 +105,7 @@ for ck in "$RUN_DIR"/checkpoint-*; do
     worker_ids+=("$id")
     n_sub=$((n_sub + 1))
 done
-echo "submitted $n_sub workers -> $DEST"
+echo "submitted $n_sub workers -> $DEST (walltime $WORKER_TIME each)"
 
 MERGED=$REPO/eval/band/${SIZE}_${KIND}/band.jsonl
 if [[ ${#worker_ids[@]} -gt 0 && $DRY_RUN != 1 ]]; then
