@@ -63,6 +63,28 @@ if [[ -z ${WORKER_TIME:-} ]]; then
     esac
 fi
 
+# Host RAM / CPUs, also per size. probe_band.sbatch's 96G/8 directives are sized
+# for 27b (55 GB of weights) and are 4x oversized for the small arms -- and an
+# oversized request does not just waste the reservation, it fails to fit into
+# backfill windows a smaller one would slot into, so the job waits longer for no
+# benefit. These are HOST RAM; GPU memory is governed by --gres and DIM_BATCH.
+if [[ -z ${WORKER_MEM:-} ]]; then
+    case "$SIZE" in
+    270m) WORKER_MEM=24G ;;
+    1b)   WORKER_MEM=32G ;;
+    4b)   WORKER_MEM=48G ;;
+    12b)  WORKER_MEM=80G ;;
+    27b)  WORKER_MEM=140G ;;
+    *)    WORKER_MEM=96G ;;
+    esac
+fi
+if [[ -z ${WORKER_CPUS:-} ]]; then
+    case "$SIZE" in
+    270m|1b) WORKER_CPUS=4 ;;
+    *)       WORKER_CPUS=8 ;;
+    esac
+fi
+
 # 4b+ must run against the pre-converted text-only base: transformers 5.14.1
 # does NOT remap the multimodal base's nested keys onto Gemma3ForCausalLM and
 # silently random-initializes instead, which would make t=0 meaningless.
@@ -97,7 +119,7 @@ for ck in "$RUN_DIR"/checkpoint-*; do
     # pure noise across a 66-worker grid, so workers stay silent by default and
     # notify_band.sbatch sends one message per ARM instead.
     id=$(sbatch --parsable --partition="$PARTITION" ${NODE:+--nodelist="$NODE"} --gres="$GRES" \
-        --time="$WORKER_TIME" \
+        --time="$WORKER_TIME" --mem="$WORKER_MEM" --cpus-per-task="$WORKER_CPUS" \
         --job-name="bd${SIZE}_$n" \
         --output="$DEST/bd${SIZE}_${n}_%j.out" --error="$DEST/bd${SIZE}_${n}_%j.err" \
         --export=ALL,SIZE="$SIZE",KIND="$KIND"${BASE_MODEL:+,BASE_MODEL="$BASE_MODEL"},CKPTS="$ck",OUT="$o",ARM="${SIZE}_${KIND}",SAVE_LENS="$SAVE_LENS",REQUEUE_ON_GPU_FAIL=0${QUIET_WORKERS:+,QUIET_SLACK=1}${DIM_BATCH:+,DIM_BATCH=$DIM_BATCH}${CKA_TOKENS:+,CKA_TOKENS=$CKA_TOKENS} \
@@ -105,7 +127,7 @@ for ck in "$RUN_DIR"/checkpoint-*; do
     worker_ids+=("$id")
     n_sub=$((n_sub + 1))
 done
-echo "submitted $n_sub workers -> $DEST (walltime $WORKER_TIME each)"
+echo "submitted $n_sub workers -> $DEST ($WORKER_TIME, $WORKER_MEM, $WORKER_CPUS cpu each)"
 
 MERGED=$REPO/eval/band/${SIZE}_${KIND}/band.jsonl
 if [[ ${#worker_ids[@]} -gt 0 && $DRY_RUN != 1 ]]; then

@@ -99,8 +99,20 @@ for SIZE in $ARMS; do
     [[ -n $DIM_BATCH ]] && base_export+=",DIM_BATCH=$DIM_BATCH"
     [[ -n $CKA_TOKENS ]] && base_export+=",CKA_TOKENS=$CKA_TOKENS"
 
+    # Host RAM per size, same reasoning as fanout_band.sh: probe_band.sbatch's
+    # 96G default is sized for 27b and an oversized request just misses backfill
+    # windows. A base probe that reuses a t=0 lens is metrics-only and needs
+    # even less than a fitting worker.
+    case "$SIZE" in
+    270m) base_mem=${MEM:-24G}; base_cpus=${CPUS:-4} ;;
+    1b)   base_mem=${MEM:-32G}; base_cpus=${CPUS:-4} ;;
+    4b)   base_mem=${MEM:-48G}; base_cpus=${CPUS:-8} ;;
+    12b)  base_mem=${MEM:-80G}; base_cpus=${CPUS:-8} ;;
+    *)    base_mem=${MEM:-140G}; base_cpus=${CPUS:-8} ;;
+    esac
     base_id=$(sbatch --parsable --partition="$PARTITION" --gres="$GRES" \
         ${NODE:+--nodelist="$NODE"} ${TIME:+--time="$TIME"} \
+        --mem="$base_mem" --cpus-per-task="$base_cpus" \
         --job-name="bd${SIZE}_base" \
         --output="$BAND_OUT/bd${SIZE}_base_%j.out" \
         --error="$BAND_OUT/bd${SIZE}_base_%j.err" \
