@@ -74,7 +74,15 @@ def parse_args():
     p.add_argument("--lens-dir", default=None,
                    help="Dir of lens_step<N>.pt / ck<N>/lens.pt, matched per step.")
     p.add_argument("--save-lens", action="store_true",
-                   help="Write the fitted lens to <out>/ck<step>/lens.pt (fp16).")
+                   help="Write the fitted lens to <out>/ck<step>/lens.pt.")
+    p.add_argument("--lens-dtype", default="float32", choices=["float16", "float32"],
+                   help="Precision for --save-lens. fp32 by default: the whole "
+                        "point of saving is never to pay the ~860 GPU-h refit "
+                        "again, and probe_jlens.py saves its t=0 base lens in "
+                        "fp32 for exactly that reason -- a banked fp16 lens "
+                        "could not be mixed with it for drift without a "
+                        "precision mismatch. fp16 halves the storage and is "
+                        "fine for the band metrics alone.")
     p.add_argument("--fit-corpus", required=True,
                    help="Frozen generic corpus: fits the lens AND feeds the text stats.")
     p.add_argument("--fit-prompts", type=int, default=None, help="Cap corpus size for the fit.")
@@ -103,16 +111,26 @@ def parse_args():
 
 
 def resolve_lens_path(args, step: int) -> str | None:
-    """Pre-fit lens for `step`, or None if this step has to be refit."""
+    """Pre-fit lens for `step`, or None if this step has to be refit.
+
+    Searches the layouts these runs actually produce. A fanout worker is given
+    OUT=<fanout>/ck<n> and then makes its own ck<step>/ inside it, so a banked
+    lens sits at <fanout>/ck<n>/ck<n>/lens.pt -- two levels down, not one.
+    Pointing --lens-dir at the fanout root has to find that, or the lenses we
+    paid ~860 GPU-h for are saved but undiscoverable.
+    """
     if args.lens:
         return args.lens
     if not args.lens_dir:
         return None
     d = Path(args.lens_dir)
     for cand in (d / f"lens_step{step}.pt", d / f"ck{step}" / "lens.pt",
-                 d / f"lens_{step}.pt"):
+                 d / f"lens_{step}.pt", d / f"ck{step}" / f"ck{step}" / "lens.pt"):
         if cand.exists():
             return str(cand)
+    # Last resort: any lens.pt under a ck<step>/ anywhere below --lens-dir.
+    for cand in sorted(d.glob(f"**/ck{step}/lens.pt")):
+        return str(cand)
     return None
 
 
@@ -179,8 +197,9 @@ def main():
             fit_s = time.time() - t0
             log.info("  lens: fitted in %.0f s", fit_s)
             if args.save_lens:
-                lens.save(str(ck_dir / "lens.pt"))
-                log.info("  lens: saved -> %s", ck_dir / "lens.pt")
+                lens.save(str(ck_dir / "lens.pt"),
+                          dtype=getattr(torch, args.lens_dtype))
+                log.info("  lens: saved (%s) -> %s", args.lens_dtype, ck_dir / "lens.pt")
 
         # band.readout_text_stats assumes the jacobians are already on the model
         # device (medlens preloads them for this reason). jlens.lens.readout
