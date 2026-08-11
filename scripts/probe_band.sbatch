@@ -54,12 +54,21 @@ _notify_slack() {
     # failure mode of guessing wrong is 66 Slack messages.
     [[ -n "${QUIET_SLACK:-}" ]] && return 0
     [[ -z "${SLACK_WEBHOOK_URL:-}" ]] && return 0
-    local code=$1 elapsed status color
+    local code=$1 elapsed status color scope
     elapsed=$(( SECONDS / 60 ))
     if [[ $code -eq 0 ]]; then status="SUCCESS"; color="good"
     else                       status="FAILED (exit ${code})"; color="danger"; fi
+    # Name the SCOPE, not just the job. A bare "bd1b_base — SUCCESS" reads as
+    # "the 1b arm is done" when it means "1 of ~15 checkpoints (t=0) is done" --
+    # that misread actually happened. The arm-level message is the one from
+    # notify_band.sbatch, and it says so.
+    if [[ "${BASE_ONLY:-0}" == "1" ]]; then
+        scope="t=0 base ONLY (1 of $(( $(ls -d ${RUN_DIR:-/nonexistent}/checkpoint-* 2>/dev/null | wc -l) + 1 )) points) — arm NOT complete; fanout follows"
+    else
+        scope="checkpoint(s): ${CKPTS:-${RUN_DIR:-?}}"
+    fi
     curl -s -X POST "${SLACK_WEBHOOK_URL}" -H 'Content-Type: application/json' -d @- <<JSON || true
-{"attachments":[{"color":"${color}","title":"Slurm: ${SLURM_JOB_NAME} [band gemma-3-${SIZE}-${KIND}] — ${status}","fields":[{"title":"Job ID","value":"${SLURM_JOB_ID}","short":true},{"title":"Partition","value":"${SLURM_JOB_PARTITION}","short":true},{"title":"Node","value":"$(hostname)","short":true},{"title":"Out","value":"${OUT}","short":false},{"title":"Elapsed","value":"${elapsed}m","short":true}]}]}
+{"attachments":[{"color":"${color}","title":"Slurm: ${SLURM_JOB_NAME} [band gemma-3-${SIZE}-${KIND}] — ${status}","fields":[{"title":"Scope","value":"${scope}","short":false},{"title":"Job ID","value":"${SLURM_JOB_ID}","short":true},{"title":"Partition","value":"${SLURM_JOB_PARTITION}","short":true},{"title":"Node","value":"$(hostname)","short":true},{"title":"Out","value":"${OUT}","short":false},{"title":"Elapsed","value":"${elapsed}m","short":true}]}]}
 JSON
 }
 trap '_notify_slack $?' EXIT
