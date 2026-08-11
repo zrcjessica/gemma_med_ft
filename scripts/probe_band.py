@@ -233,12 +233,6 @@ def main():
             acc_top1=stats["acc_top1"], acc_topk=stats["acc_topk"],
             acc_k=stats["acc_k"], dim_frac=dim_frac,
         )
-        band_mod.band_diagnostic_plot(
-            cka, layers, stats, (lo, hi), str(ck_dir / "band_diagnostic.png"),
-            dim_frac=dim_frac,
-            title=f"{arm} step {step} — suggested workspace band: layers {lo}-{hi} "
-                  f"({depth[0]:.0%}-{depth[1]:.0%} of depth)")
-
         # Row carries the full per-layer curves as well as the scalars: the
         # cross-arm plots need the curves, and re-opening 5 arms x 14 npz files
         # to get them is slower and easier to get out of sync.
@@ -270,6 +264,22 @@ def main():
 
         log.info("  band = layers %d-%d (%.0f%%-%.0f%% of depth), width %.0f%%",
                  lo, hi, 100 * depth[0], 100 * depth[1], 100 * (depth[1] - depth[0]))
+
+        # LAST, and never fatal. The diagnostic PNG is a convenience; the row
+        # above and the npz are the result. Plotting after the row is durable
+        # means a matplotlib problem costs a picture, not a lens fit -- which is
+        # 37 min at 270m and 47 h at 27b. (It cost exactly that once: matplotlib
+        # was missing from .venv-jlens and killed a completed 270m fit.)
+        try:
+            band_mod.band_diagnostic_plot(
+                cka, layers, stats, (lo, hi), str(ck_dir / "band_diagnostic.png"),
+                dim_frac=dim_frac,
+                title=f"{arm} step {step} — suggested workspace band: layers {lo}-{hi} "
+                      f"({depth[0]:.0%}-{depth[1]:.0%} of depth)")
+        except Exception as e:
+            log.warning("  diagnostic plot failed (%s: %s) -- metrics are safe in "
+                        "band.jsonl + band_stats.npz; replot from the npz",
+                        type(e).__name__, e)
 
         del hf, model, lens, w_sub
         torch.cuda.empty_cache()
