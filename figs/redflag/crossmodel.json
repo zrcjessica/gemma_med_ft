@@ -1,0 +1,902 @@
+[
+  {
+    "tag": "270m_it_ck0",
+    "arm": "270m_it",
+    "size": "270m",
+    "params_b": 0.27,
+    "step": 0,
+    "band": [
+      10,
+      16
+    ],
+    "band_source": "eval/band per-step row, 10,16",
+    "headline_statistic": "jac_hit_frac",
+    "threshold_source": "tuned on this split's benign arm (95th pct) \u2014 DEV ONLY",
+    "dissociation": 0.1,
+    "dissociation_ci95": [
+      0.02,
+      0.2
+    ],
+    "dissociation_n": 50,
+    "escalation": {
+      "benign": {
+        "n": 50,
+        "escalated": 0.0,
+        "recognized": 0.02,
+        "median_gen_tokens": 52
+      },
+      "implicit": {
+        "n": 50,
+        "escalated": 0.0,
+        "recognized": 0.0,
+        "median_gen_tokens": 46
+      },
+      "explicit": {
+        "n": 50,
+        "escalated": 0.2,
+        "recognized": 0.34,
+        "median_gen_tokens": 61
+      }
+    },
+    "auroc_jac_z_margin_end": 0.6236,
+    "auroc_jac_z_margin_end_ci95": [
+      0.5096,
+      0.7268
+    ],
+    "auroc_base_z_margin_end": 0.6144,
+    "auroc_base_z_margin_end_ci95": [
+      0.5071599999999999,
+      0.72
+    ],
+    "auroc_jac_hit_frac": 0.558,
+    "auroc_jac_hit_frac_ci95": [
+      0.437195,
+      0.6656149999999998
+    ],
+    "auroc_base_hit_frac": 0.5252,
+    "auroc_base_hit_frac_ci95": [
+      0.40959500000000004,
+      0.6362149999999999
+    ]
+  },
+  {
+    "tag": "270m_it_ck512",
+    "arm": "270m_it",
+    "size": "270m",
+    "params_b": 0.27,
+    "step": 512,
+    "band": [
+      10,
+      16
+    ],
+    "band_source": "eval/band per-step row, 10,16",
+    "headline_statistic": "jac_hit_frac",
+    "threshold_source": "tuned on this split's benign arm (95th pct) \u2014 DEV ONLY",
+    "dissociation": 0.16,
+    "dissociation_ci95": [
+      0.06,
+      0.28
+    ],
+    "dissociation_n": 50,
+    "escalation": {
+      "benign": {
+        "n": 50,
+        "escalated": 0.0,
+        "recognized": 0.08,
+        "median_gen_tokens": 1024
+      },
+      "implicit": {
+        "n": 50,
+        "escalated": 0.0,
+        "recognized": 0.1,
+        "median_gen_tokens": 1024
+      },
+      "explicit": {
+        "n": 50,
+        "escalated": 0.28,
+        "recognized": 0.46,
+        "median_gen_tokens": 1024
+      }
+    },
+    "auroc_jac_z_margin_end": 0.554,
+    "auroc_jac_z_margin_end_ci95": [
+      0.43838,
+      0.66321
+    ],
+    "auroc_base_z_margin_end": 0.5944,
+    "auroc_base_z_margin_end_ci95": [
+      0.4836,
+      0.7044
+    ],
+    "auroc_jac_hit_frac": 0.5542,
+    "auroc_jac_hit_frac_ci95": [
+      0.432565,
+      0.6638149999999998
+    ],
+    "auroc_base_hit_frac": 0.4948,
+    "auroc_base_hit_frac_ci95": [
+      0.37579500000000005,
+      0.607405
+    ]
+  },
+  {
+    "tag": "270m_it_ck4882",
+    "arm": "270m_it",
+    "size": "270m",
+    "params_b": 0.27,
+    "step": 4882,
+    "band": [
+      10,
+      16
+    ],
+    "band_source": "eval/band per-step row, 10,16",
+    "headline_statistic": "jac_hit_frac",
+    "threshold_source": "tuned on this split's benign arm (95th pct) \u2014 DEV ONLY",
+    "dissociation": 0.22,
+    "dissociation_ci95": [
+      0.1,
+      0.34
+    ],
+    "dissociation_n": 50,
+    "escalation": {
+      "benign": {
+        "n": 50,
+        "escalated": 0.02,
+        "recognized": 0.08,
+        "median_gen_tokens": 1024
+      },
+      "implicit": {
+        "n": 50,
+        "escalated": 0.02,
+        "recognized": 0.14,
+        "median_gen_tokens": 1024
+      },
+      "explicit": {
+        "n": 50,
+        "escalated": 0.36,
+        "recognized": 0.52,
+        "median_gen_tokens": 1024
+      }
+    },
+    "auroc_jac_z_margin_end": 0.5908,
+    "auroc_jac_z_margin_end_ci95": [
+      0.4764,
+      0.6960599999999997
+    ],
+    "auroc_base_z_margin_end": 0.576,
+    "auroc_base_z_margin_end_ci95": [
+      0.46637999999999996,
+      0.6848099999999999
+    ],
+    "auroc_jac_hit_frac": 0.5502,
+    "auroc_jac_hit_frac_ci95": [
+      0.43217,
+      0.662005
+    ],
+    "auroc_base_hit_frac": 0.4946,
+    "auroc_base_hit_frac_ci95": [
+      0.37497,
+      0.6026549999999997
+    ]
+  },
+  {
+    "tag": "1b_it_ck0",
+    "arm": "1b_it",
+    "size": "1b",
+    "params_b": 1.0,
+    "step": 0,
+    "band": [
+      9,
+      24
+    ],
+    "band_source": "eval/band per-step row, 9,24",
+    "headline_statistic": "jac_hit_frac",
+    "threshold_source": "tuned on this split's benign arm (95th pct) \u2014 DEV ONLY",
+    "dissociation": 0.0,
+    "dissociation_ci95": [
+      0.0,
+      0.0
+    ],
+    "dissociation_n": 50,
+    "escalation": {
+      "benign": {
+        "n": 50,
+        "escalated": 0.0,
+        "recognized": 0.06,
+        "median_gen_tokens": 208
+      },
+      "implicit": {
+        "n": 50,
+        "escalated": 0.02,
+        "recognized": 0.1,
+        "median_gen_tokens": 250
+      },
+      "explicit": {
+        "n": 50,
+        "escalated": 0.78,
+        "recognized": 0.74,
+        "median_gen_tokens": 506
+      }
+    },
+    "auroc_jac_z_margin_end": 0.7476,
+    "auroc_jac_z_margin_end_ci95": [
+      0.64398,
+      0.83841
+    ],
+    "auroc_base_z_margin_end": 0.7604,
+    "auroc_base_z_margin_end_ci95": [
+      0.65516,
+      0.8524299999999999
+    ],
+    "auroc_jac_hit_frac": 0.5346,
+    "auroc_jac_hit_frac_ci95": [
+      0.41758500000000004,
+      0.6432
+    ],
+    "auroc_base_hit_frac": 0.4552,
+    "auroc_base_hit_frac_ci95": [
+      0.337395,
+      0.5676
+    ]
+  },
+  {
+    "tag": "1b_it_ck512",
+    "arm": "1b_it",
+    "size": "1b",
+    "params_b": 1.0,
+    "step": 512,
+    "band": [
+      14,
+      24
+    ],
+    "band_source": "eval/band per-step row, 14,24",
+    "headline_statistic": "jac_hit_frac",
+    "threshold_source": "tuned on this split's benign arm (95th pct) \u2014 DEV ONLY",
+    "dissociation": 0.0,
+    "dissociation_ci95": [
+      0.0,
+      0.0
+    ],
+    "dissociation_n": 50,
+    "escalation": {
+      "benign": {
+        "n": 50,
+        "escalated": 0.0,
+        "recognized": 0.08,
+        "median_gen_tokens": 169
+      },
+      "implicit": {
+        "n": 50,
+        "escalated": 0.02,
+        "recognized": 0.08,
+        "median_gen_tokens": 180
+      },
+      "explicit": {
+        "n": 50,
+        "escalated": 0.6,
+        "recognized": 0.62,
+        "median_gen_tokens": 275
+      }
+    },
+    "auroc_jac_z_margin_end": 0.6728,
+    "auroc_jac_z_margin_end_ci95": [
+      0.5571900000000001,
+      0.77801
+    ],
+    "auroc_base_z_margin_end": 0.6768,
+    "auroc_base_z_margin_end_ci95": [
+      0.56556,
+      0.78
+    ],
+    "auroc_jac_hit_frac": 0.5626,
+    "auroc_jac_hit_frac_ci95": [
+      0.44238500000000003,
+      0.67441
+    ],
+    "auroc_base_hit_frac": 0.4588,
+    "auroc_base_hit_frac_ci95": [
+      0.347995,
+      0.5674049999999999
+    ]
+  },
+  {
+    "tag": "1b_it_ck4882",
+    "arm": "1b_it",
+    "size": "1b",
+    "params_b": 1.0,
+    "step": 4882,
+    "band": [
+      14,
+      24
+    ],
+    "band_source": "eval/band per-step row, 14,24",
+    "headline_statistic": "jac_hit_frac",
+    "threshold_source": "tuned on this split's benign arm (95th pct) \u2014 DEV ONLY",
+    "dissociation": 0.0,
+    "dissociation_ci95": [
+      0.0,
+      0.0
+    ],
+    "dissociation_n": 50,
+    "escalation": {
+      "benign": {
+        "n": 50,
+        "escalated": 0.0,
+        "recognized": 0.06,
+        "median_gen_tokens": 191
+      },
+      "implicit": {
+        "n": 50,
+        "escalated": 0.0,
+        "recognized": 0.1,
+        "median_gen_tokens": 206
+      },
+      "explicit": {
+        "n": 50,
+        "escalated": 0.56,
+        "recognized": 0.7,
+        "median_gen_tokens": 263
+      }
+    },
+    "auroc_jac_z_margin_end": 0.6392,
+    "auroc_jac_z_margin_end_ci95": [
+      0.526,
+      0.7472
+    ],
+    "auroc_base_z_margin_end": 0.6608,
+    "auroc_base_z_margin_end_ci95": [
+      0.5539900000000001,
+      0.7616
+    ],
+    "auroc_jac_hit_frac": 0.526,
+    "auroc_jac_hit_frac_ci95": [
+      0.4072,
+      0.6338149999999999
+    ],
+    "auroc_base_hit_frac": 0.4688,
+    "auroc_base_hit_frac_ci95": [
+      0.35719500000000004,
+      0.581205
+    ]
+  },
+  {
+    "tag": "4b_it_ck0",
+    "arm": "4b_it",
+    "size": "4b",
+    "params_b": 4.3,
+    "step": 0,
+    "band": [
+      10,
+      30
+    ],
+    "band_source": "eval/band per-step row, 10,30",
+    "headline_statistic": "jac_hit_frac",
+    "threshold_source": "tuned on this split's benign arm (95th pct) \u2014 DEV ONLY",
+    "dissociation": 0.08,
+    "dissociation_ci95": [
+      0.02,
+      0.16
+    ],
+    "dissociation_n": 50,
+    "escalation": {
+      "benign": {
+        "n": 50,
+        "escalated": 0.02,
+        "recognized": 0.02,
+        "median_gen_tokens": 112
+      },
+      "implicit": {
+        "n": 50,
+        "escalated": 0.08,
+        "recognized": 0.2,
+        "median_gen_tokens": 169
+      },
+      "explicit": {
+        "n": 50,
+        "escalated": 0.84,
+        "recognized": 0.78,
+        "median_gen_tokens": 298
+      }
+    },
+    "auroc_jac_z_margin_end": 0.7936,
+    "auroc_jac_z_margin_end_ci95": [
+      0.7011900000000001,
+      0.8712099999999999
+    ],
+    "auroc_base_z_margin_end": 0.7544,
+    "auroc_base_z_margin_end_ci95": [
+      0.65757,
+      0.8448
+    ],
+    "auroc_jac_hit_frac": 0.6564,
+    "auroc_jac_hit_frac_ci95": [
+      0.5471900000000001,
+      0.7624
+    ],
+    "auroc_base_hit_frac": 0.5796,
+    "auroc_base_hit_frac_ci95": [
+      0.46518,
+      0.6924
+    ]
+  },
+  {
+    "tag": "4b_it_ck512",
+    "arm": "4b_it",
+    "size": "4b",
+    "params_b": 4.3,
+    "step": 512,
+    "band": [
+      13,
+      31
+    ],
+    "band_source": "eval/band per-step row, 13,31",
+    "headline_statistic": "jac_hit_frac",
+    "threshold_source": "tuned on this split's benign arm (95th pct) \u2014 DEV ONLY",
+    "dissociation": 0.1,
+    "dissociation_ci95": [
+      0.02,
+      0.18
+    ],
+    "dissociation_n": 50,
+    "escalation": {
+      "benign": {
+        "n": 50,
+        "escalated": 0.0,
+        "recognized": 0.06,
+        "median_gen_tokens": 203
+      },
+      "implicit": {
+        "n": 50,
+        "escalated": 0.08,
+        "recognized": 0.24,
+        "median_gen_tokens": 278
+      },
+      "explicit": {
+        "n": 50,
+        "escalated": 0.78,
+        "recognized": 0.78,
+        "median_gen_tokens": 278
+      }
+    },
+    "auroc_jac_z_margin_end": 0.7224,
+    "auroc_jac_z_margin_end_ci95": [
+      0.6216,
+      0.8168
+    ],
+    "auroc_base_z_margin_end": 0.6836,
+    "auroc_base_z_margin_end_ci95": [
+      0.5796,
+      0.78001
+    ],
+    "auroc_jac_hit_frac": 0.6176,
+    "auroc_jac_hit_frac_ci95": [
+      0.50158,
+      0.7252
+    ],
+    "auroc_base_hit_frac": 0.5434,
+    "auroc_base_hit_frac_ci95": [
+      0.42819500000000005,
+      0.656005
+    ]
+  },
+  {
+    "tag": "4b_it_ck4882",
+    "arm": "4b_it",
+    "size": "4b",
+    "params_b": 4.3,
+    "step": 4882,
+    "band": [
+      9,
+      30
+    ],
+    "band_source": "eval/band per-step row, 9,30",
+    "headline_statistic": "jac_hit_frac",
+    "threshold_source": "tuned on this split's benign arm (95th pct) \u2014 DEV ONLY",
+    "dissociation": 0.14,
+    "dissociation_ci95": [
+      0.06,
+      0.24
+    ],
+    "dissociation_n": 50,
+    "escalation": {
+      "benign": {
+        "n": 50,
+        "escalated": 0.0,
+        "recognized": 0.06,
+        "median_gen_tokens": 199
+      },
+      "implicit": {
+        "n": 50,
+        "escalated": 0.06,
+        "recognized": 0.12,
+        "median_gen_tokens": 240
+      },
+      "explicit": {
+        "n": 50,
+        "escalated": 0.84,
+        "recognized": 0.7,
+        "median_gen_tokens": 271
+      }
+    },
+    "auroc_jac_z_margin_end": 0.7468,
+    "auroc_jac_z_margin_end_ci95": [
+      0.6448,
+      0.8348099999999999
+    ],
+    "auroc_base_z_margin_end": 0.742,
+    "auroc_base_z_margin_end_ci95": [
+      0.6435799999999999,
+      0.8304199999999999
+    ],
+    "auroc_jac_hit_frac": 0.673,
+    "auroc_jac_hit_frac_ci95": [
+      0.561595,
+      0.7748249999999999
+    ],
+    "auroc_base_hit_frac": 0.5758,
+    "auroc_base_hit_frac_ci95": [
+      0.460795,
+      0.6862549999999997
+    ]
+  },
+  {
+    "tag": "12b_it_ck0",
+    "arm": "12b_it",
+    "size": "12b",
+    "params_b": 12.2,
+    "step": 0,
+    "band": [
+      21,
+      46
+    ],
+    "band_source": "eval/band per-step row, 21,46",
+    "headline_statistic": "jac_hit_frac",
+    "threshold_source": "tuned on this split's benign arm (95th pct) \u2014 DEV ONLY",
+    "dissociation": 0.1,
+    "dissociation_ci95": [
+      0.02,
+      0.18
+    ],
+    "dissociation_n": 50,
+    "escalation": {
+      "benign": {
+        "n": 50,
+        "escalated": 0.02,
+        "recognized": 0.04,
+        "median_gen_tokens": 146
+      },
+      "implicit": {
+        "n": 50,
+        "escalated": 0.34,
+        "recognized": 0.36,
+        "median_gen_tokens": 244
+      },
+      "explicit": {
+        "n": 50,
+        "escalated": 0.94,
+        "recognized": 0.86,
+        "median_gen_tokens": 299
+      }
+    },
+    "auroc_jac_z_margin_end": 0.7992,
+    "auroc_jac_z_margin_end_ci95": [
+      0.70679,
+      0.88001
+    ],
+    "auroc_base_z_margin_end": 0.8072,
+    "auroc_base_z_margin_end_ci95": [
+      0.71679,
+      0.8844
+    ],
+    "auroc_jac_hit_frac": 0.6368,
+    "auroc_jac_hit_frac_ci95": [
+      0.5319900000000001,
+      0.7432099999999999
+    ],
+    "auroc_base_hit_frac": 0.6254,
+    "auroc_base_hit_frac_ci95": [
+      0.519195,
+      0.7300099999999999
+    ]
+  },
+  {
+    "tag": "12b_it_ck512",
+    "arm": "12b_it",
+    "size": "12b",
+    "params_b": 12.2,
+    "step": 512,
+    "band": [
+      19,
+      46
+    ],
+    "band_source": "eval/band per-step row, 19,46",
+    "headline_statistic": "jac_hit_frac",
+    "threshold_source": "tuned on this split's benign arm (95th pct) \u2014 DEV ONLY",
+    "dissociation": 0.14,
+    "dissociation_ci95": [
+      0.06,
+      0.24
+    ],
+    "dissociation_n": 50,
+    "escalation": {
+      "benign": {
+        "n": 50,
+        "escalated": 0.0,
+        "recognized": 0.06,
+        "median_gen_tokens": 159
+      },
+      "implicit": {
+        "n": 50,
+        "escalated": 0.12,
+        "recognized": 0.22,
+        "median_gen_tokens": 229
+      },
+      "explicit": {
+        "n": 50,
+        "escalated": 0.72,
+        "recognized": 0.78,
+        "median_gen_tokens": 279
+      }
+    },
+    "auroc_jac_z_margin_end": 0.7176,
+    "auroc_jac_z_margin_end_ci95": [
+      0.6143599999999999,
+      0.81321
+    ],
+    "auroc_base_z_margin_end": 0.7268,
+    "auroc_base_z_margin_end_ci95": [
+      0.6227900000000001,
+      0.8196
+    ],
+    "auroc_jac_hit_frac": 0.6346,
+    "auroc_jac_hit_frac_ci95": [
+      0.52878,
+      0.7380199999999999
+    ],
+    "auroc_base_hit_frac": 0.5826,
+    "auroc_base_hit_frac_ci95": [
+      0.47478,
+      0.6904199999999999
+    ]
+  },
+  {
+    "tag": "12b_it_ck4882",
+    "arm": "12b_it",
+    "size": "12b",
+    "params_b": 12.2,
+    "step": 4882,
+    "band": [
+      19,
+      46
+    ],
+    "band_source": "eval/band per-step row, 19,46",
+    "headline_statistic": "jac_hit_frac",
+    "threshold_source": "tuned on this split's benign arm (95th pct) \u2014 DEV ONLY",
+    "dissociation": 0.12,
+    "dissociation_ci95": [
+      0.04,
+      0.22
+    ],
+    "dissociation_n": 50,
+    "escalation": {
+      "benign": {
+        "n": 50,
+        "escalated": 0.0,
+        "recognized": 0.1,
+        "median_gen_tokens": 196
+      },
+      "implicit": {
+        "n": 50,
+        "escalated": 0.08,
+        "recognized": 0.26,
+        "median_gen_tokens": 250
+      },
+      "explicit": {
+        "n": 50,
+        "escalated": 0.84,
+        "recognized": 0.88,
+        "median_gen_tokens": 271
+      }
+    },
+    "auroc_jac_z_margin_end": 0.7344,
+    "auroc_jac_z_margin_end_ci95": [
+      0.63399,
+      0.8268
+    ],
+    "auroc_base_z_margin_end": 0.7448,
+    "auroc_base_z_margin_end_ci95": [
+      0.64437,
+      0.8348099999999999
+    ],
+    "auroc_jac_hit_frac": 0.6556,
+    "auroc_jac_hit_frac_ci95": [
+      0.54559,
+      0.7564099999999999
+    ],
+    "auroc_base_hit_frac": 0.6346,
+    "auroc_base_hit_frac_ci95": [
+      0.5226,
+      0.7360149999999999
+    ]
+  },
+  {
+    "tag": "27b_it_ck0",
+    "arm": "27b_it",
+    "size": "27b",
+    "params_b": 27.4,
+    "step": 0,
+    "band": [
+      28,
+      60
+    ],
+    "band_source": "eval/band per-step row, 28,60",
+    "headline_statistic": "jac_hit_frac",
+    "threshold_source": "tuned on this split's benign arm (95th pct) \u2014 DEV ONLY",
+    "dissociation": 0.06,
+    "dissociation_ci95": [
+      0.0,
+      0.14
+    ],
+    "dissociation_n": 50,
+    "escalation": {
+      "benign": {
+        "n": 50,
+        "escalated": 0.02,
+        "recognized": 0.08,
+        "median_gen_tokens": 172
+      },
+      "implicit": {
+        "n": 50,
+        "escalated": 0.48,
+        "recognized": 0.44,
+        "median_gen_tokens": 236
+      },
+      "explicit": {
+        "n": 50,
+        "escalated": 0.94,
+        "recognized": 0.88,
+        "median_gen_tokens": 263
+      }
+    },
+    "auroc_jac_z_margin_end": 0.8436,
+    "auroc_jac_z_margin_end_ci95": [
+      0.76318,
+      0.9132
+    ],
+    "auroc_base_z_margin_end": 0.8492,
+    "auroc_base_z_margin_end_ci95": [
+      0.76839,
+      0.9184299999999999
+    ],
+    "auroc_jac_hit_frac": 0.6972,
+    "auroc_jac_hit_frac_ci95": [
+      0.594395,
+      0.7964399999999998
+    ],
+    "auroc_base_hit_frac": 0.6814,
+    "auroc_base_hit_frac_ci95": [
+      0.574,
+      0.7804199999999999
+    ]
+  },
+  {
+    "tag": "27b_it_ck512",
+    "arm": "27b_it",
+    "size": "27b",
+    "params_b": 27.4,
+    "step": 512,
+    "band": [
+      28,
+      60
+    ],
+    "band_source": "eval/band per-step row, 28,60",
+    "headline_statistic": "jac_hit_frac",
+    "threshold_source": "tuned on this split's benign arm (95th pct) \u2014 DEV ONLY",
+    "dissociation": 0.14,
+    "dissociation_ci95": [
+      0.059500000000000025,
+      0.24
+    ],
+    "dissociation_n": 50,
+    "escalation": {
+      "benign": {
+        "n": 50,
+        "escalated": 0.0,
+        "recognized": 0.1,
+        "median_gen_tokens": 165
+      },
+      "implicit": {
+        "n": 50,
+        "escalated": 0.14,
+        "recognized": 0.26,
+        "median_gen_tokens": 206
+      },
+      "explicit": {
+        "n": 50,
+        "escalated": 0.68,
+        "recognized": 0.74,
+        "median_gen_tokens": 259
+      }
+    },
+    "auroc_jac_z_margin_end": 0.8028,
+    "auroc_jac_z_margin_end_ci95": [
+      0.7108,
+      0.88481
+    ],
+    "auroc_base_z_margin_end": 0.7728,
+    "auroc_base_z_margin_end_ci95": [
+      0.6731400000000001,
+      0.86
+    ],
+    "auroc_jac_hit_frac": 0.6806,
+    "auroc_jac_hit_frac_ci95": [
+      0.5748,
+      0.77801
+    ],
+    "auroc_base_hit_frac": 0.6318,
+    "auroc_base_hit_frac_ci95": [
+      0.52198,
+      0.736
+    ]
+  },
+  {
+    "tag": "27b_it_ck4882",
+    "arm": "27b_it",
+    "size": "27b",
+    "params_b": 27.4,
+    "step": 4882,
+    "band": [
+      28,
+      60
+    ],
+    "band_source": "eval/band per-step row, 28,60",
+    "headline_statistic": "jac_hit_frac",
+    "threshold_source": "tuned on this split's benign arm (95th pct) \u2014 DEV ONLY",
+    "dissociation": 0.12,
+    "dissociation_ci95": [
+      0.04,
+      0.22
+    ],
+    "dissociation_n": 50,
+    "escalation": {
+      "benign": {
+        "n": 50,
+        "escalated": 0.0,
+        "recognized": 0.06,
+        "median_gen_tokens": 204
+      },
+      "implicit": {
+        "n": 50,
+        "escalated": 0.12,
+        "recognized": 0.32,
+        "median_gen_tokens": 232
+      },
+      "explicit": {
+        "n": 50,
+        "escalated": 0.82,
+        "recognized": 0.8,
+        "median_gen_tokens": 287
+      }
+    },
+    "auroc_jac_z_margin_end": 0.7756,
+    "auroc_jac_z_margin_end_ci95": [
+      0.6796,
+      0.8592
+    ],
+    "auroc_base_z_margin_end": 0.79,
+    "auroc_base_z_margin_end_ci95": [
+      0.6943900000000001,
+      0.87081
+    ],
+    "auroc_jac_hit_frac": 0.7082,
+    "auroc_jac_hit_frac_ci95": [
+      0.60517,
+      0.8066049999999999
+    ],
+    "auroc_base_hit_frac": 0.6756,
+    "auroc_base_hit_frac_ci95": [
+      0.5644,
+      0.7756049999999999
+    ]
+  }
+]

@@ -14,3 +14,16 @@ eval/**/*_predictions.jsonl
 # macOS resource forks / metadata (arrive via rsync from mounted volumes)
 ._*
 .DS_Store
+
+# LaTeX build intermediates (decks are built with tectonic/latexmk in place)
+slides/*.aux
+slides/*.fdb_latexmk
+slides/*.fls
+slides/*.log
+slides/*.nav
+slides/*.out
+slides/*.snm
+slides/*.toc
+
+# Banked lenses pulled back from BigPurple -- 27-127 MB of binary weights each
+eval/band/**/lens.pt
