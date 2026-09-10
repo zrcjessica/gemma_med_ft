@@ -1,6 +1,7 @@
 #!/bin/bash
 #SBATCH --job-name=gemma_jlens_spike
 #SBATCH --partition=a100_short
+#SBATCH --time=01:00:00
 #SBATCH --nodes=1
 #SBATCH --cpus-per-task=8
 #SBATCH --mem=96G

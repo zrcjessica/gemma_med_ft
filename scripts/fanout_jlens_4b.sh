@@ -20,6 +20,10 @@ DEST=${DEST:-$JLENS_OUT/4b_it_fanout}
 RUN_DIR=${RUN_DIR:-$REPO/outputs/4b/full_lr1e-5_25911616}
 BASE=${BASE:-$REPO/data/text_bases/4b_it}
 NODE=${NODE:-sp-0006}
+# ~3.5h/checkpoint measured; 1 day is generous. Never omit --time: the site's
+# job_submit lua stamps 365 days on a walltime-less job, which no backfill
+# window can ever hold.
+WORKER_TIME=${WORKER_TIME:-1-00:00:00}
 
 BASE_LENS=$SRC/.base_lens.pt
 [[ -f $BASE_LENS ]] || { echo "FATAL: no base lens at $BASE_LENS" >&2; exit 1; }
@@ -36,6 +40,7 @@ for ck in "$RUN_DIR"/checkpoint-*; do
     ln -sf "$BASE_LENS" "$o/.base_lens.pt"
     printf '%s\n' "$STEP0" > "$o/metrics.jsonl"
     sbatch --partition=superpod --nodelist="$NODE" --gres=gpu:h100:1 \
+        --time="$WORKER_TIME" \
         --job-name="jl4b_$n" \
         --output="$DEST/jl4b_${n}_%j.out" --error="$DEST/jl4b_${n}_%j.err" \
         --export=ALL,SIZE=4b,KIND=it,BASE_MODEL="$BASE",CKPTS="$ck",OUT="$o",WANDB_DIR="$o",REQUEUE_ON_GPU_FAIL=0 \

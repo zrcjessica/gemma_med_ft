@@ -38,6 +38,23 @@ PARTITION=${PARTITION:-superpod}
 GRES=${GRES:-gpu:h100:1}
 DRY_RUN=${DRY_RUN:-0}
 
+# Never submit without a walltime. probe_jlens.sbatch's own --time is sized for
+# a direct small-arm submit; the fanout knows the size, so it sizes per arm from
+# the measured fit rate (~3.5h/ckpt at 4b, ~15h at 12b, ~47h at 27b) with
+# headroom. Same table as fanout_band.sh. Without this the site's job_submit lua
+# stamps 365 days, which is un-backfillable on superpod and rejected outright
+# (Reason=PartitionTimeLimit) on a capped partition like a100_short.
+if [[ -z ${WORKER_TIME:-} ]]; then
+    case "$SIZE" in
+    270m) WORKER_TIME=06:00:00 ;;
+    1b)   WORKER_TIME=12:00:00 ;;
+    4b)   WORKER_TIME=1-00:00:00 ;;
+    12b)  WORKER_TIME=3-00:00:00 ;;
+    27b)  WORKER_TIME=7-00:00:00 ;;
+    *)    WORKER_TIME=1-00:00:00 ;;
+    esac
+fi
+
 [[ -d $BASE ]] || { echo "FATAL: no text base at $BASE (run make_text_base.sbatch)" >&2; exit 1; }
 BASE_LENS=$SRC/.base_lens.pt
 [[ -f $BASE_LENS ]] || { echo "FATAL: no base lens at $BASE_LENS (run BASE_ONLY=1 first)" >&2; exit 1; }
@@ -63,6 +80,7 @@ for ck in "$RUN_DIR"/checkpoint-*; do
     ln -sf "$BASE_LENS" "$o/.base_lens.pt"
     printf '%s\n' "$STEP0" > "$o/metrics.jsonl"
     sbatch --partition="$PARTITION" ${NODE:+--nodelist="$NODE"} --gres="$GRES" \
+        --time="$WORKER_TIME" \
         --job-name="jl${SIZE}_$n" \
         --output="$DEST/jl${SIZE}_${n}_%j.out" --error="$DEST/jl${SIZE}_${n}_%j.err" \
         --export=ALL,SIZE="$SIZE",KIND="$KIND",BASE_MODEL="$BASE",CKPTS="$ck",OUT="$o",WANDB_DIR="$o",REQUEUE_ON_GPU_FAIL=0${DIM_BATCH:+,DIM_BATCH=$DIM_BATCH} \

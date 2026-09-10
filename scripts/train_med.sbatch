@@ -1,6 +1,7 @@
 #!/bin/bash
 #SBATCH --job-name=gemma_med
 #SBATCH --partition=oermannlab
+#SBATCH --time=3-00:00:00
 #SBATCH --nodes=1
 #SBATCH --cpus-per-task=16
 #SBATCH --mem=200G

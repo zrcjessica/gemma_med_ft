@@ -1,6 +1,7 @@
 #!/bin/bash
 #SBATCH --job-name=gemma_jlens
 #SBATCH --partition=a100_short
+#SBATCH --time=1-00:00:00
 #SBATCH --nodes=1
 #SBATCH --cpus-per-task=8
 #SBATCH --mem=96G
@@ -12,6 +13,14 @@
 # Jacobian-lens trajectory probe over one training run's checkpoints. Runs in the
 # standalone .venv-jlens (transformers>=5.5). Submit e.g.:
 #   sbatch --export=ALL,SIZE=270m,RUN_DIR=outputs/270m/full_lr1e-5_123 scripts/probe_jlens.sbatch
+#
+# The 1-day --time above covers a small-arm probe (measured max 14h) and exists
+# so the job is backfillable at all -- omit it and the site's job_submit lua
+# stamps 365 days, which no backfill window can hold. It is NOT enough for a
+# serial multi-checkpoint probe at 12b/27b (~15h and ~47h PER checkpoint), so
+# override it when you submit one directly:
+#   sbatch --time=7-00:00:00 --export=ALL,SIZE=27b,RUN_DIR=... scripts/probe_jlens.sbatch
+# fanout_jlens.sh already sizes --time per arm, so fan-out workers need nothing.
 #
 # Env vars:
 #   SIZE        270m|1b|4b|12b|27b            (required; resolves the t=0 base)
