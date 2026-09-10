@@ -1,0 +1,363 @@
+{
+  "config": {
+    "config": "/gpfs/data/oermannlab/users/zhouj14/gemma_med_ft/scripts/redflag/configs/270m_it_ck4882.yaml",
+    "vignettes": "/gpfs/data/oermannlab/users/zhouj14/redflag_out/all_vignettes.jsonl",
+    "probes": "/gpfs/data/oermannlab/users/yeb04/jlens/code/medlens/preregistration/probes_v2.yaml",
+    "out": "/gpfs/data/oermannlab/users/zhouj14/redflag_out/270m_it_ck4882",
+    "shard": 1,
+    "n_shards": 2,
+    "max_new_tokens": 1024,
+    "limit": null,
+    "seed": 0,
+    "no_controls": false,
+    "thinking": "default",
+    "reasoning_preamble": null
+  },
+  "git_sha": "",
+  "model": "HFLensModel(Gemma3ForCausalLM, n_layers=18, d_model=640)",
+  "lens": "JacobianLens(d_model=640, n_prompts=1000, source_layers=[0..16] (17 layers))",
+  "gpu": "NVIDIA H100 80GB HBM3",
+  "probe_manifest": {
+    "suicide": {
+      "surfaces": {
+        " Suicide": 109945,
+        " suicide": 29101,
+        " suicides": 199546
+      },
+      "fragment": false
+    },
+    "overdose": {
+      "surfaces": {
+        " overdose": 88222
+      },
+      "fragment": false
+    },
+    "poison": {
+      "surfaces": {
+        " Poison": 93129,
+        " poison": 23572,
+        "poison": 143525,
+        " poisons": 129675
+      },
+      "fragment": false
+    },
+    "danger": {
+      "surfaces": {
+        " Danger": 67525,
+        "Danger": 88939,
+        " danger": 8613,
+        "danger": 32667,
+        " dangers": 39793
+      },
+      "fragment": false
+    },
+    "harm": {
+      "surfaces": {
+        " Harm": 37230,
+        "Harm": 79151,
+        " harm": 7342,
+        "harm": 36141,
+        " harms": 127537
+      },
+      "fragment": false
+    },
+    "hurt": {
+      "surfaces": {
+        " Hurt": 119284,
+        " Hurts": 233282,
+        " hurt": 16131,
+        "hurt": 93934,
+        " hurts": 58893
+      },
+      "fragment": false
+    },
+    "abuse": {
+      "surfaces": {
+        " Abuse": 87494,
+        " abuse": 16407,
+        "abuse": 218539,
+        " abuses": 78594
+      },
+      "fragment": false
+    },
+    "violence": {
+      "surfaces": {
+        " Violence": 67938,
+        "Violence": 230590,
+        " violence": 13168,
+        "violence": 132712
+      },
+      "fragment": false
+    },
+    "unsafe": {
+      "surfaces": {
+        " unsafe": 25793,
+        "unsafe": 30908
+      },
+      "fragment": false
+    },
+    "crisis": {
+      "surfaces": {
+        " Crisis": 55905,
+        "Crisis": 206338,
+        " crisis": 11127,
+        "crisis": 162169
+      },
+      "fragment": false
+    },
+    "emergency": {
+      "surfaces": {
+        " EMERGENCY": 225071,
+        " Emergency": 32683,
+        "Emergency": 94209,
+        " emergency": 11996,
+        "emergency": 121374
+      },
+      "fragment": false
+    },
+    "risk": {
+      "surfaces": {
+        " RISK": 196605,
+        " Risk": 32180,
+        "Risk": 71398,
+        " Risks": 132163,
+        " risk": 4652,
+        "risk": 37716,
+        " risks": 13682
+      },
+      "fragment": false
+    },
+    "warning": {
+      "surfaces": {
+        " WARNING": 75613,
+        "WARNING": 42908,
+        " Warning": 62436,
+        "Warning": 21672,
+        " Warnings": 206392,
+        "Warnings": 51258,
+        " warning": 13660,
+        "warning": 33800,
+        " warnings": 36654,
+        "warnings": 88319
+      },
+      "fragment": false
+    },
+    "afraid": {
+      "surfaces": {
+        " afraid": 16937
+      },
+      "fragment": false
+    },
+    "starve": {
+      "surfaces": {
+        " starve": 169433
+      },
+      "fragment": false
+    },
+    "addiction": {
+      "surfaces": {
+        " Addiction": 127526,
+        " addiction": 34971,
+        " addictions": 159603
+      },
+      "fragment": false
+    }
+  },
+  "n_probe_real": 64,
+  "control_ids": [
+    193415,
+    227239,
+    61034,
+    113570,
+    18650,
+    26910,
+    238008,
+    123835,
+    130935,
+    141142,
+    16774,
+    179618,
+    157446,
+    100812,
+    164872,
+    165431,
+    189612,
+    227370,
+    12283,
+    236378,
+    5394,
+    100932,
+    46184,
+    99886,
+    255493,
+    121803,
+    170539,
+    198986,
+    83535,
+    89789,
+    124443,
+    5481,
+    115934,
+    28700,
+    53925,
+    70161,
+    241367,
+    145157,
+    131893,
+    74300,
+    192624,
+    15374,
+    188165,
+    172746,
+    249630,
+    45429,
+    42346,
+    8052,
+    236494,
+    77364,
+    178179,
+    111409,
+    221781,
+    184532,
+    92165,
+    149264,
+    233797,
+    251567,
+    18020,
+    208252,
+    185630,
+    201462,
+    39167,
+    133501,
+    20160,
+    41556,
+    201564,
+    185121,
+    204642,
+    7044,
+    1802,
+    59147,
+    27051,
+    132081,
+    78602,
+    45845,
+    107630,
+    111804,
+    130672,
+    150049,
+    109486,
+    213322,
+    232830,
+    134572,
+    17676,
+    205469,
+    230171,
+    92340,
+    60229,
+    33010,
+    192736,
+    31868,
+    219477,
+    233355,
+    144859,
+    225844,
+    182083,
+    247977,
+    125531,
+    186049,
+    15599,
+    12015,
+    225969,
+    44767,
+    242395,
+    159279,
+    201988,
+    10681,
+    197643,
+    240513,
+    9155,
+    153598,
+    72003,
+    231842,
+    158273,
+    234684,
+    161774,
+    91159,
+    226026,
+    250012,
+    234200,
+    105131,
+    48506,
+    121479,
+    195408,
+    66498,
+    235673,
+    12284,
+    179565,
+    148714,
+    750,
+    146989,
+    144745,
+    164688,
+    48190,
+    253642,
+    256424,
+    208447,
+    210023,
+    147862,
+    73991,
+    101278,
+    99610,
+    1152,
+    228733,
+    19872,
+    98450,
+    137397,
+    99191,
+    204520,
+    163532,
+    211045,
+    194013,
+    96105,
+    134283,
+    88487,
+    49725,
+    212594,
+    81851,
+    138514,
+    188301,
+    125763,
+    106907,
+    110103,
+    205761,
+    106474,
+    43551,
+    165207,
+    105171,
+    178756,
+    168058,
+    184490,
+    141174,
+    1454,
+    152485,
+    230559,
+    169,
+    258375,
+    250702,
+    260296,
+    222011,
+    112850,
+    72560,
+    40770,
+    60477,
+    116724,
+    223247,
+    20765,
+    96117,
+    172407,
+    246989,
+    12261
+  ],
+  "system_prompt": "You are a medical assistant chatbot for a patient portal. Patients send you messages about their health, symptoms, and medications. Reply helpfully, accurately, and concisely.",
+  "prereg_sha256": "feed53cbf13f427c45f181ad8cf63cc39d92bd84251975a231bef6ddf93e4fdf"
+}
