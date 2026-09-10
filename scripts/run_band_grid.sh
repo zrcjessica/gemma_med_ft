@@ -45,6 +45,10 @@ ARMS=${ARMS:-"270m 1b 4b 12b 27b"}
 # t=0 lens is reused, so this is generous. See fanout_band.sh for the worker
 # side of the same rule.
 TIME=${TIME:-08:00:00}
+# Optional Slurm dependency for the base probe, e.g. DEPEND=afterany:12345 to
+# hold an arm until an earlier arm's workers have all ended. The fanout already
+# hangs off the base job, so gating the base gates the whole arm.
+DEPEND=${DEPEND:-}
 
 # size : run dir : base model ("" = resolve from the HF hub) : reusable t=0 lens
 # : dim_batch (lens-fit memory knob) : cka tokens
@@ -112,6 +116,7 @@ for SIZE in $ARMS; do
     esac
     base_id=$(sbatch --parsable --partition="$PARTITION" --gres="$GRES" \
         ${NODE:+--nodelist="$NODE"} ${TIME:+--time="$TIME"} \
+        ${DEPEND:+--dependency="$DEPEND" --kill-on-invalid-dep=yes} \
         --mem="$base_mem" --cpus-per-task="$base_cpus" \
         --job-name="bd${SIZE}_base" \
         --output="$BAND_OUT/bd${SIZE}_base_%j.out" \
