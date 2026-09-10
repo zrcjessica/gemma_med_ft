@@ -1,0 +1,37 @@
+{
+  "judge_provider": "local",
+  "judge_model": "Barney",
+  "judge_decode": {
+    "temperature": 0.0,
+    "seed": 0
+  },
+  "results": {
+    "medqa": {
+      "n": 1273,
+      "n_expected": 1273,
+      "acc_raw": 66.22,
+      "acc_answered": 68.59,
+      "answer_rate": 96.54,
+      "judge_self_disagreement": 0,
+      "judge_self_disagreement_pct": 0.0
+    },
+    "medmcqa": {
+      "n": 4183,
+      "n_expected": 4183,
+      "acc_raw": 55.08,
+      "acc_answered": 56.29,
+      "answer_rate": 97.85,
+      "judge_self_disagreement": 1,
+      "judge_self_disagreement_pct": 0.02
+    },
+    "pubmedqa": {
+      "n": 500,
+      "n_expected": 500,
+      "acc_raw": 65.2,
+      "acc_answered": 65.2,
+      "answer_rate": 100.0,
+      "judge_self_disagreement": 0,
+      "judge_self_disagreement_pct": 0.0
+    }
+  }
+}

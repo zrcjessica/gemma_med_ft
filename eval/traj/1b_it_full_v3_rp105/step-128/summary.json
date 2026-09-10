@@ -1,0 +1,29 @@
+{
+  "model": "/gpfs/data/oermannlab/users/zhouj14/gemma_med_ft/outputs/1b/full_lr1e-5_25716223/checkpoint-128",
+  "label": "1b_it_full_v3_rp105-step128",
+  "scored": false,
+  "decode": {
+    "temperature": 0.0,
+    "max_new_tokens": 1024,
+    "repetition_penalty": 1.05,
+    "seed": 0
+  },
+  "engine": {
+    "tensor_parallel_size": 1,
+    "max_model_len": null
+  },
+  "results": {
+    "medqa": {
+      "n": 1273,
+      "n_at_token_cap": 148
+    },
+    "medmcqa": {
+      "n": 4183,
+      "n_at_token_cap": 552
+    },
+    "pubmedqa": {
+      "n": 500,
+      "n_at_token_cap": 9
+    }
+  }
+}
