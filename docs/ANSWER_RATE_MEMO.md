@@ -91,15 +91,22 @@ format compliance".
 prompt's literal `<letter>` placeholder. Fixable by rewording `MCQ_SUFFIX`, at
 the cost of comparability with every generation produced so far.
 
-## Open decision
+## Decision (2026-08-05): adopt `rp=1.1`
 
-The frozen decode config is unchanged: `temperature=0.0`, `max_new_tokens=1024`,
-`repetition_penalty=1.0`. Adopting a new one means re-decoding **and re-judging
-every arm** (~$100 of judging plus GPU time) — a change that lands unevenly
-across sizes and training steps cannot be corrected for after the fact, the same
-argument §5 makes about the regex.
+The frozen decode config is now `temperature=0.0`, `max_new_tokens=1024`,
+**`repetition_penalty=1.1`** — `evaluate.py`'s default as of this date. `t=0.7`
+fixes the same failure by the same mechanism but sacrifices determinism, so the
+penalty is the smaller intervention.
 
-`rp=1.05` may be the better operating point than `rp=1.10`: it halves the loops
-while leaving `acc_answered` untouched, whereas 1.10 costs 3.9pp on MedQA by
-taxing the legitimate repetition of medical terminology. `t=0.7` fixes it too but
-sacrifices determinism.
+Two things this costs, recorded because neither can be corrected for after the
+fact (the same argument §5 makes about the regex):
+
+- **Every arm decoded at `rp=1.0` must be re-decoded and re-judged** before it
+  can share a figure with a new one — ~$100 of judging for the corpus, plus GPU
+  time. A config change lands unevenly across sizes and training steps, so a
+  half-converted corpus is worse than either whole.
+- **`rp=1.05` was arguably the better operating point** and was not chosen: it
+  halves the loops while leaving `acc_answered` untouched, whereas `1.10` costs
+  3.9pp on MedQA by taxing the legitimate repetition of medical terminology.
+  Expect a small `acc_answered` step down at the changeover; it is the penalty,
+  not a regression.

@@ -408,11 +408,15 @@ Array tasks each get their own `VLLM_CACHE_ROOT`: co-scheduled vLLM processes
 otherwise race on the shared torch-compile cache and die with "corrupted
 compilation artifact" (it killed 3 of 4 on the first submission).
 
-> **Decode settings are part of the instrument.** `temperature=0.0`,
-> `max_new_tokens=1024`, `repetition_penalty=1.0` **remains** the frozen
-> configuration and the only one any published number may use — the result above
-> is a reason to consider changing it, not a licence to have changed it.
-> `evaluate.py` now records the config in `summary.json` for exactly this reason.
+> **Decode settings are part of the instrument.** As of **2026-08-05** the frozen
+> configuration is `temperature=0.0`, `max_new_tokens=1024`,
+> **`repetition_penalty=1.1`** — the result above was taken as sufficient reason
+> to change it, and `evaluate.py`'s default moved accordingly. Everything decoded
+> before that date used `rp=1.0` and is a **different instrument**: it may not
+> share a figure or a table with anything decoded after, and must be re-decoded
+> *and* re-judged to be brought forward. `evaluate.py` records the config in
+> `summary.json` so which instrument produced a number is answerable from the run
+> directory alone — check it before combining two eval dirs.
 > The probe lives in its own `eval/decode_probe/` tree and its numbers may not be
 > mixed into §6 or §7 — same rule as regex-vs-judge (§13). Changing the config
 > means re-decoding **and re-judging every arm**, on the same argument §5 makes
@@ -459,6 +463,62 @@ All 788 rows, by shape:
 chain-of-thought hitting the generation limit. That is wrong** — only **7 of 788
 (1%)** ended at the token cap. Truncation is not what this diagnostic tracks;
 §8 covers what actually happens at the cap.
+
+## 9b. The judge's own decode config (measured 2026-08-05)
+
+§9 asks whether the judge contradicts *itself within one response*. This asks the
+cheaper and more basic question: **does the judge give the same answer twice?**
+
+Until 2026-08-05 `judge.py` sent **no sampling parameters at all**, so freezing
+"the judge" froze only the model name — Anthropic sampled at its default
+`temperature=1.0`, and the self-hosted vLLM at whatever the served model's
+`generation_config.json` said. `judge.py` now sends `temperature=0.0` on every
+provider and `seed=0` on the self-hosted server, and records what actually went on
+the wire as `judge_decode` in `judged_summary.json`.
+
+Two API facts constrain that and are not guessable:
+
+- **The Anthropic Messages API has no `seed` parameter.** Seeding exists only on
+  the OpenAI-compatible path, and `judge.py` sets it for `LocalJudge` alone — a
+  hosted endpoint may reject an unknown field, which fails every row rather than
+  one.
+- **Claude from Opus 4.7 / Sonnet 5 onward rejects `temperature` with a 400**
+  rather than ignoring it. `anthropic_decode()` omits it for those model
+  prefixes, so a `judge_decode: {}` in a summary means *this model sampled at its
+  own default*, not *nobody set anything*.
+
+`scripts/ab_judge_decode.py` measures it: four passes over the same rows with the
+same model — two at the old wire (A1, A2) and two at `t=0` (B1, B2). 300 rows per
+benchmark of 4b step-512, Claude arm, sync, ~$2.50.
+
+| Comparison | MedQA `chosen` flips | MedMCQA `chosen` flips | max `acc_raw` swing |
+|---|---:|---:|---:|
+| **old config, same rows twice** (A1 vs A2) | 4/298 — **1.34%** | 2/298 — **0.67%** | **1.01pp** |
+| **new config, same rows twice** (B1 vs B2) | 1/300 — **0.33%** | 0/300 — **0.00%** | 0.33pp |
+| old vs new (A1 vs B1) | 3/299 — 1.00% | 2/298 — 0.67% | 0.67pp |
+
+Three things to take from it:
+
+- **The old config was measurably unrepeatable.** Re-judging identical rows moved
+  `acc_raw` by up to 1.0pp with nothing changed but the sampling draw. Pinning
+  `t=0` cuts flips ~4× on MedQA and to zero on MedMCQA.
+- **Adopting it does not invalidate anything already judged.** Old-vs-new differs
+  by ≤0.67pp, i.e. *inside the old config's own run-to-run noise* — so unlike the
+  regex→judge switch (§5) or a decode change (§8), this one does not split the
+  corpus and needs no re-judging.
+- **`t=0` is still not bitwise deterministic.** One MedQA row flipped between B1
+  and B2: batch composition moves floating-point ties on both providers. Claim
+  reproducibility, never determinism.
+
+Two rows failed both passes with `Grammar compilation timed out` (an
+Anthropic-side structured-output error, not a decode issue). Judging is resumable,
+so a re-run picks them up; they are excluded from the comparison by index
+intersection rather than silently counted as agreement.
+
+**Not yet measured on the judge of record.** `local` (Barney) became the default
+judge the same day, and its arm — where `seed` actually applies, and where the
+unversioned server is the real reproducibility risk — runs only from inside
+BigPurple: `sbatch scripts/ab_judge_decode.sbatch`.
 
 ## 10. Cost and wall-clock (measured)
 
@@ -508,22 +568,27 @@ The final `--mode sync` sweep is not optional. The judge exits 0 when a batch ha
 a handful of failed items, so the collect loop will not retry them — the 4b run
 had 4 such items across three batches, picked up by the sweep.
 
-**Providers.** `--provider` also accepts `moonshot` and `local`, but **only
-`anthropic` is supported for this study.** It is the sole provider with a Batches
-API — hence the only half-price offline path — and it is the judge of record; no
-result in this document was produced by any other provider. `--mode batch` on the
-non-batching providers is rejected, not silently downgraded; an *unset* `--mode`
-resolves per provider (batch where there is a Batches API, sync where there is
-not), so the provider is the only variable that has to change.
+**Providers.** `local` — the lab's self-hosted Kimi (served as `Barney`) on
+BigPurple — is **the judge of record and the default everywhere as of
+2026-08-05**: free, rate-limit-free, ~10 judgments/s at `CONC=32`, and therefore
+the provider to use for the 12b/27b arms and everything after them. It runs only
+inside BigPurple, so the default path is a Slurm submission.
+
+`anthropic` was the judge of record from 2026-07-30 to 2026-08-05 and **produced
+every number in this document**; it remains the fallback for when the lab server's
+Slurm job is gone, and the only provider that runs from olab1. `--mode batch` on
+the non-batching providers is rejected, not silently downgraded; an *unset*
+`--mode` resolves per provider (batch where there is a Batches API, sync where
+there is not), so the provider is the only variable that has to change.
 
 Switching is one env var, and the wrappers absorb the rest — endpoint discovery
 for the self-hosted server, the mode, and the three batch passes — via
 `scripts/_judge_provider.sh`:
 
 ```bash
-scripts/judge.sh --root eval/traj/<tag>                  # anthropic (default here), on olab1
-PROVIDER=local scripts/judge.sh --root eval/traj/<tag>   # lab Kimi, compute node only
-sbatch --export=ALL,TAG=<tag>[,PROVIDER=anthropic] scripts/judge_traj.sbatch
+sbatch --export=ALL,TAG=<tag> scripts/judge_traj.sbatch  # lab Kimi (default), compute node
+scripts/judge.sh --root eval/traj/<tag>                  # same default, only on a compute node
+PROVIDER=anthropic scripts/judge.sh --root eval/traj/<tag>   # Claude, from olab1
 ```
 
 **The toggle is per run, not per directory.** Judging is resumable and keyed by
@@ -561,8 +626,9 @@ slide deck quarantines the regex-scored arms on their own slide for this reason.
 ## 13. Standing rules
 
 1. **The judge is an instrument — freeze it.** One judge model per trajectory,
-   recorded in `judged_summary.json`. Same discipline as the frozen jlens fit
-   corpus and probe set.
+   recorded in `judged_summary.json`, **and one decode config with it** (§9b):
+   `temperature=0.0` everywhere, `seed=0` on the self-hosted server, both recorded
+   as `judge_decode`. Same discipline as the frozen jlens fit corpus and probe set.
 2. **Never mix regex and judge scores in one figure.** They are not comparable;
    §5 quantifies by how much.
 3. **Never truncate the embedded model response** to reduce cost.

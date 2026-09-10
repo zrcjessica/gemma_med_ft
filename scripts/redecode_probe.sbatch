@@ -25,9 +25,15 @@
 #   .venv-judge/bin/python -m gemma_med.judge --root eval/decode_probe/<TAG> --mode sync
 #   .venv-probe/bin/python scripts/analyze_unanswered.py eval/decode_probe/<TAG>/*
 #
-# The control arm (idx 0) is not redundant: it re-runs the frozen decode settings
-# on the same slice, so the other three are read against a number produced by
-# this job, not against the full-set trajectory row.
+# The control arm (idx 0) is not redundant: it re-runs the decode settings the
+# corpus was produced under on the same slice, so the other three are read
+# against a number produced by this job, not against the full-set trajectory row.
+#
+# NB (2026-08-05): that control, `t0.0_rp1.00`, is no longer the frozen config --
+# this probe is what moved it to rp=1.1. Arm idx 2 (`t0.0_rp1.10`) is now the
+# frozen setting and idx 0 is the historical one, kept because the pre-2026-08-05
+# corpus was decoded under it. Adjust which arm you read as "control" accordingly;
+# the arm list is deliberately unchanged so old and new probe runs stay comparable.
 
 set -euo pipefail
 

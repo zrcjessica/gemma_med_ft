@@ -161,16 +161,23 @@ Consequences to keep in mind:
   `chosen`.
 - Judging is **resumable and idempotent** (keyed on item index). Price a run
   first with `--estimate`.
-- **Three providers.** `--provider anthropic` (Claude, `ANTHROPIC_API_KEY`) is
-  the only one with a Batches API, hence the only half-price offline path;
-  `--provider moonshot` (Kimi hosted API) is sync-only, which cancels most of
-  its lower per-token price; `--provider local` is the **lab's self-hosted Kimi
-  on BigPurple** — free and rate-limit-free, but it is somebody else's Slurm job
-  and vanishes without notice. **`anthropic` is the judge of record as of
-  2026-07-30** (`claude-haiku-4-5`, `--mode batch`): ~$32 per trajectory, ~11
-  minutes wall-clock, runs on olab1. The two agree to within 1.3pp on identical
-  items (45.0 vs 46.3 acc_raw on 300 medqa rows at 4b step-1024), so the
-  freeze-the-judge rule is about reproducibility, not about either being wrong.
+- **Three providers.** `--provider local` is the **lab's self-hosted Kimi on
+  BigPurple** — free and rate-limit-free, but it is somebody else's Slurm job
+  and vanishes without notice; `--provider anthropic` (Claude,
+  `ANTHROPIC_API_KEY`) is the only one with a Batches API, hence the only
+  half-price offline path and the only one that runs from olab1; `--provider
+  moonshot` (Kimi hosted API) is sync-only, which cancels most of its lower
+  per-token price. **`local` is the judge of record and the default everywhere
+  as of 2026-08-05** (`Barney`, `--mode sync`, ~10 judgments/s at `CONC=32`):
+  free, ~7h for a full trajectory, and it **must run on a BigPurple compute
+  node** — so the default path is `sbatch scripts/judge_traj.sbatch`, not
+  olab1. Fall back to `PROVIDER=anthropic` (~$32, ~11 min batched, runs on
+  olab1) when the lab server is down or the queue is too slow to wait on; that
+  was the judge of record from 2026-07-30 to 2026-08-05, so **`4b_it_full` and
+  the 270m/1b arms carry Claude verdicts** — see the mixing rule below. The two
+  agree to within 1.3pp on identical items (45.0 vs 46.3 acc_raw on 300 medqa
+  rows at 4b step-1024), so the freeze-the-judge rule is about reproducibility,
+  not about either being wrong.
   `--mode batch` on the non-batching providers is rejected, not silently
   downgraded (an *unset* `--mode` resolves per provider — batch where there is a
   Batches API, sync where there isn't — so switching provider is one variable).
@@ -216,10 +223,35 @@ silently breaks the judge:
   `judge.py` refuses unless `--allow-judge-switch`, and records
   `judge_mixed_with` in the summary when you insist.
 - **So are the decode settings.** `temperature=0.0`, `max_new_tokens=1024`,
-  `repetition_penalty=1.0` is the frozen config, now recorded in `summary.json`.
-  `--repetition-penalty` / `--seed` exist only for the decode probe
-  (`scripts/redecode_probe.sbatch`); its output lives in `eval/decode_probe/`
-  and may not be mixed into trajectory figures.
+  `repetition_penalty=1.1` is the frozen config as of **2026-08-05**, recorded in
+  `summary.json`. The penalty was `1.0` before that date; the switch is deliberate
+  (see "Unanswered ≠ truncated" below) and it **splits the corpus in two** —
+  anything decoded at `rp=1.0` measures a different instrument and may not share a
+  figure with anything decoded at `rp=1.1`. `--repetition-penalty` / `--seed`
+  remain overridable for the decode probe (`scripts/redecode_probe.sbatch`), whose
+  output lives in `eval/decode_probe/` and may not be mixed into trajectory
+  figures either.
+- **And so is the judge's own decode config.** `temperature=0.0` on every
+  provider, plus `seed=0` on the self-hosted server (the Anthropic Messages API
+  has no seed parameter; hosted endpoints may reject the field). Recorded as
+  `judge_decode` in `judged_summary.json`. Before 2026-08-05 nothing was sent and
+  each provider sampled at its own default, so "the judge" was frozen at the model
+  level only. `judge_decode: {}` means the model rejects sampling params (Claude
+  Opus 4.7+ / Sonnet 5+ return a 400 rather than ignoring them, so `judge.py`
+  omits temperature for those).
+
+  **Measured** (`scripts/ab_judge_decode.py`, 4 passes × 300 rows of 4b step-512,
+  Claude arm, `eval/decode_probe/judge_ab_anthropic/report.json`). Judging the
+  *same rows twice* flipped `chosen` on **1.34% / 0.67%** (MedQA / MedMCQA) under
+  the old wire and on **0.33% / 0.00%** at `t=0` — so the old config moved
+  `acc_raw` by up to **1.0pp between two identical runs**. Old-vs-new differs by
+  ≤0.67pp, i.e. **inside the old config's own run-to-run noise**: previously
+  judged dirs stay comparable, and the change buys reproducibility, not a
+  different answer. `t=0` is *not* bitwise deterministic (1 MedQA row still
+  flipped) — batch composition moves floating-point ties, so never claim it is.
+  **The judge-of-record arm is `local`, which runs only on BigPurple** (`sbatch
+  scripts/ab_judge_decode.sbatch`) and is still unmeasured; the numbers above are
+  the Claude fallback.
 
 ## Unanswered ≠ truncated
 
@@ -235,8 +267,20 @@ come, land by p99=418 — so a bigger cap recovers nothing. MedGemma loops on
 items/bench): `repetition_penalty=1.10` takes answer rate 85.7 → 98.7 (MedQA)
 and 87.3 → 98.3 (MedMCQA), i.e. back to base/MedGemma levels; `temperature=0.7`
 does the same. `acc_raw` gains +3.3/+6.0pp, `acc_answered` does **not** rise —
-no capability appears, it was never missing. The frozen config is still
-`t=0.0, rp=1.0`: adopting a new one means re-decoding *and* re-judging every arm.
+no capability appears, it was never missing.
+
+**`rp=1.1` is the frozen config as of 2026-08-05** (`evaluate.py`'s default).
+Two consequences, neither optional:
+
+- **Every arm decoded before that date must be re-decoded *and* re-judged** to
+  enter a figure alongside new ones. Re-decode is the cheap half; re-judging is
+  ~$32/trajectory. Until an arm is redone, treat its numbers as belonging to the
+  old instrument and say so in the caption.
+- **The 4b step-512 probe measured `rp=1.05` as arguably the better operating
+  point** — same ~halving of loops with `acc_answered` untouched, where `1.10`
+  costs 3.9pp of `acc_answered` on MedQA by taxing legitimate repetition of
+  medical terminology. `1.1` is the chosen setting; the tradeoff is recorded here
+  so the `acc_answered` step at the changeover is not later read as a regression.
 
 ## Run commands
 
@@ -247,18 +291,19 @@ sbatch --gres=gpu:a100:2 --export=ALL,SIZE=1b,KIND=it,LR=1e-5 scripts/train_med.
 # Price a trajectory before judging it (always)
 python -m gemma_med.judge --root eval/traj/1b_it_full_v3 --estimate
 
-# Judge with Claude (default; ~$32, ~11 min per trajectory, on olab1).
+# Judge with the lab's self-hosted Kimi (the default; free, ~7h/trajectory,
+# BigPurple only). Submit it -- do not run a full trajectory on the login node.
+sbatch --export=ALL,TAG=1b_it_full_v3 scripts/judge_traj.sbatch
+sbatch --export=ALL,TAG=1b_it_full_v3,LIMIT=50 scripts/judge_traj.sbatch   # smoke test
+scripts/kimi_url.sh                 # which node is serving right now
+scripts/judge.sh --root eval/traj/4b_it_full                    # same default, compute node only
+
+# Fall back to Claude when the lab server is down, or from olab1 (~$32, ~11 min).
 # The key comes from .env automatically; scripts/judge.sh does the batch
 # submit-all -> collect -> sync-sweep passes, all three of which are load-bearing.
-scripts/judge.sh --root eval/traj/4b_it_full
-scripts/judge.sh --pred-dir eval/gemma-3-1b-it-baseline
-
-# Same thing with the lab's self-hosted Kimi (free; BigPurple compute node only)
-scripts/kimi_url.sh                 # which node is serving right now
-PROVIDER=local scripts/judge.sh --root eval/traj/4b_it_full     # on a compute node
-sbatch --export=ALL,TAG=1b_it_full_v3 scripts/judge_traj.sbatch            # PROVIDER=local default
+PROVIDER=anthropic scripts/judge.sh --root eval/traj/4b_it_full
+PROVIDER=anthropic scripts/judge.sh --pred-dir eval/gemma-3-1b-it-baseline
 sbatch --export=ALL,TAG=1b_it_full_v3,PROVIDER=anthropic scripts/judge_traj.sbatch
-sbatch --export=ALL,TAG=1b_it_full_v3,LIMIT=50 scripts/judge_traj.sbatch   # smoke test
 
 # The raw module still takes the same flags if you need one pass at a time
 python -m gemma_med.judge --root eval/traj/4b_it_full --mode batch --no-wait  # submit all
@@ -279,6 +324,16 @@ SPIKE_MODEL=google/gemma-3-4b-it python scripts/spike_jlens_gemma.py
   but rejects every allocation (`a100-4003/4029/4030` seen bad). Jobs preflight
   with a real allocation and requeue onto a fresh node, accumulating an exclude
   list. Keep that pattern in any GPU sbatch.
+- **Every superpod submission needs `--qos=qos_superpod`.** Without it the job
+  runs under QOS `normal` (priority 0) against everyone else's `qos_superpod`
+  (priority 50000), sits at `Reason=Priority` indefinitely, and never starts even
+  with free H100s — Slurm holds them for higher-priority pending work. This is
+  what `scripts/watch_band_12b.sh` was written to route around, and the real fix
+  was one flag: the 12b band's ck512 lost 10 attempts over 11h under `normal`,
+  then went straight to `Reason=Resources` under `qos_superpod`. The band/fanout
+  scripts (`fanout_band.sh`, `run_band_grid.sh`, `fanout_jlens*.sh`,
+  `watch_band_12b.sh`) default `PARTITION=superpod` but do **not** set a QOS —
+  pass it explicitly until they do.
 - **Run multi-minute probes via `sbatch` (detached), not interactive `srun`** —
   an `srun` tied to an SSH session dies when that session is backgrounded.
 - **`data/` is gitignored** (large mixtures), with a scoped exception
