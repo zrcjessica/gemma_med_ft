@@ -68,7 +68,7 @@ through CPU first.
 SMOKE=1 scripts/redflag/run_arm.sh 270m_it 27b_it
 scripts/redflag/run_arm.sh                       # every arm, 3 steps each
 
-# Rule-based screening + blinded CSV (seconds; medlens's judge, not ours)
+# Rule-based escalation screening (seconds; medlens's judge, not ours)
 scripts/redflag/judge_redflag.sh /gpfs/.../redflag_out/*_ck*
 
 # Statistics, each run in ITS OWN band, refusing any run whose band is missing
@@ -232,9 +232,9 @@ step, but by 1–4 points.
 - **Decode is rp=1.0**, medlens's frozen setting, *not* our rp=1.1
   (`BEHAVIORAL_EVAL.md` §8). Expect repetition loops in some replies. These
   replies may not enter a trajectory figure.
-- **The judge is a regex**, medlens's own, not `gemma_med.judge`. Its blinded
-  CSV is what clinician labels of record would come from; the rule scores are a
-  first-pass signal.
+- **The judge is a regex**, medlens's own, not `gemma_med.judge`, and it is the
+  measure of record: no clinician adjudication is planned, so every escalation
+  rate here is an unvalidated regex rate.
 - **Comparison to the lab's own panel is not exact.** Their published
   `gemma-3-4b-it` run used a Neuronpedia lens (546 prompts, different corpus
   selection) and a prereg revision that no longer exists on disk
@@ -249,10 +249,6 @@ step, but by 1–4 points.
   whether it happens in the first few dozen steps (a format/persona effect) or
   builds gradually (a content effect). This is the highest-value follow-up and
   costs a few GPU-hours.
-- **Get clinician labels on the blinded CSVs** for at least 12b/27b at t=0 and
-  4882. `escalated_rule` is medlens's regex; the headline claim is a 36pp drop
-  measured by it, and the blinded review CSVs exist precisely so that number can
-  be checked by a human who cannot see which model produced which reply.
 - **Re-decode at rp=1.1** as a robustness check. The loops are not driving this
   result (checked above), but the whole corpus is at medlens's rp=1.0 and our
   frozen harness is rp=1.1, so these replies still may not share a figure with

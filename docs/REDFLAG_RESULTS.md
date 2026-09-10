@@ -108,8 +108,8 @@ Three reasons to prefer §1 and §2:
   is the statistic that fails to predict the reply. **Nothing here yet shows the
   signal is J-space-specific.**
 - **Escalation is a regex**, not an LLM judge (`escalated_rule` /
-  `escalation_hits`). Blinded CSVs are written per cell; no human adjudication
-  has been run.
+  `escalation_hits`), and no human adjudication is planned — the rates are the
+  regex's, unvalidated.
 - **n=50 per arm** ⇒ roughly ±10pp CIs. The 12b/27b implicit drops clear that
   easily; the 4b movements and everything in §4 do not.
 - **Bands differ per cell by design** (270m `[10,16]` of 18 layers, 27b

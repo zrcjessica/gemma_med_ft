@@ -74,8 +74,8 @@
       \texttt{explicit} is a ceiling (can it escalate at all) and
       \texttt{benign} is a floor (does it escalate at nothing).
     \item \textbf{Escalation is rule-based} (\texttt{escalated\_rule} +
-      \texttt{escalation\_hits}), \emph{not} an LLM judge. Blinded CSVs are
-      written per cell; no human adjudication has been run yet.
+      \texttt{escalation\_hits}), \emph{not} an LLM judge, and no human
+      adjudication is planned.
     \item Gemma 3 has no thinking block, so \texttt{recognized\_in\_thinking} is
       always null and the read-out reduces to \textbf{internal signal vs.\
       verbalized escalation} --- the cleaner form of the question.
@@ -254,8 +254,8 @@
     \begin{column}{0.48\textwidth}
       \textbf{Open}
       \begin{itemize}\setlength{\itemsep}{0.1em}
-        \item \textbf{Human adjudication.} Escalation is a regex; the blinded
-          CSVs exist and nobody has scored them.
+        \item \textbf{Regex-scored.} Escalation rates are medlens's regex,
+          unvalidated; no human check is planned.
         \item \textbf{$n{=}50$} gives $\approx\pm10$pp CIs. The 12b/27b implicit
           drops clear that easily; the 4b movements and the whole dissociation
           table do not.
